@@ -126,7 +126,7 @@ npm run dev
 
 ## Deployment
 
-`TBD` (Vercel or Heroku).
+This project was deployed via Vercel at [reint-challenge.vercel.app](reint-challenge.vercel.app)
 
 ## AI Declaration
 
