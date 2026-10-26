@@ -30,8 +30,9 @@ The tech stack used is Python (FastAPI), React (Vite) and Docker.
 backend/
   app/
     main.py          # FastAPI app and API endpoints
-    forecastdata.py  # Fetching and caching of FUELHH and WINDFOR data from Elexon
-    analysis.py      # Forecast selection and error metrics
+    forecast_data.py # Fetching and caching of FUELHH and WINDFOR data from Elexon
+    analysis.py      # Forecast selection, error metrics and as-of margins
+  data/              # Cached Elexon responses (created on first fetch - in .gitignore so will be created locally)
   tests/
   Dockerfile
   requirements.txt
@@ -43,9 +44,58 @@ docker-compose.yml
 ### Key design decisions
 
 - **Docker:** used so the app builds and runs identically on any machine (`docker compose up`) and to support container-based deployment. Note that Vercel does not run containers, so the deployment target determines whether Docker is used in production or only for local/review runs.
-- **Latest available forecast:** for each target time, the forecast with the latest `publishTime` at or before the day-ahead decision cutoff on the previous day (D-1) is used. The cutoff time is configurable and documented here: `TBD`.
-- **Time handling:** all timestamps are handled in UTC internally (Elexon timestamps are UTC; the UK is on GMT in January, so there is no BST offset in scope).
+- **Latest available forecast:** for each target time, the forecast with the latest `publishTime` at or before the day-ahead decision cutoff on the previous day (D-1) is used. The default cutoff is assumed to be 12:00 UTC on D-1, and it can be changed per request through the `cutoff` parameter of the API endpoints in `main.py`.
+- **Time handling:** all timestamps are handled in UTC internally (Elexon timestamps are UTC; the UK is on GMT in January, same as UTC so there is no offset in scope).
 - **Error metrics:** MAE, RMSE and bias (mean error), with breakdowns such as by time of day and forecast horizon.
+- **As-of methodology:** error margins for a delivery day use only periods already observed at the decision time, so no future information leaks in (see [Methodology](#methodology)).
+
+## Methodology
+
+### Decision-time forecast
+For each target half-hour, the forecast used is the latest WINDFOR publication with `publishTime` at or before the decision cutoff on the previous day (D-1). The default cutoff is 12:00 UTC and can be changed per request (`cutoff=HH:MM`).
+
+### As-of error statistics
+Error margins shown for a delivery day are built **only from periods already observed at the decision time**, so nothing from the delivery day or later is used (no look-ahead).
+
+- A past half-hour counts only once it has finished by the cutoff.
+- **Window:** expanding (all history since 1 Jan, the default) or rolling (`window_days=N`, the last N days).
+- **Minimum history:** 3 distinct days. Below that, the API returns `insufficient_history` and no range is shown.
+- **Sign convention:** `error = forecast − actual` (MW). Positive means the forecast over-predicted wind, so a buyer relying on it would under-buy.
+
+Metrics reported: MAE, RMSE, bias (mean error), MAE as a % of mean actual, share and average size of over- and under-forecasts, and error percentiles (5th, 25th, 50th, 75th, 95th). Breakdowns are by time of day, forecast horizon (`publishTime` to `startTime`), actual wind level (terciles) and delivery day.
+
+### Plausible range for a delivery day
+Because `error = forecast − actual`, `actual = forecast − error`. The range for each half-hour is therefore:
+
+- lower = forecast − 95th percentile of past errors (floored at 0)
+- upper = forecast − 5th percentile of past errors
+
+The percentiles default to 5 and 95 (a nominal 90% range) and are configurable (`lower_pct`, `upper_pct`). The same pooled error distribution is applied to every half-hour of the day.
+
+This range describes how far past forecasts were from actuals. It is information for the decision, not a recommended purchase quantity.
+
+### Backtest
+For every delivery day with enough history, the range is built using only information available at that day's decision time, then compared with the actual generation. The share of half-hours where the actual fell inside the range should be close to the nominal 90%.
+
+Result on January 2026 data (cutoff 12:00 UTC, expanding window): **XX.X%** of actuals inside the range. `TBD`
+
+## Limitations
+
+- One pooled error distribution is applied to all half-hours. Errors differ by time of day and horizon (see the breakdowns), so the range is a simplification.
+- The 12:00 UTC cutoff is an assumption, not a verified gate closure time.
+- Past error is a guide to future error, not a guarantee.
+
+## API
+
+Interactive docs are at `/docs` when the backend is running. All times are UTC.
+
+| Endpoint | Purpose | Main parameters |
+|---|---|---|
+| `GET /api/health` | Health check | none |
+| `GET /api/meta` | Selectable delivery dates, cutoff in use, data-gap counts | `cutoff` |
+| `GET /api/forecast/{forecast_date}` | Latest forecast available at the cutoff for one day, with publish time, horizon, actual (if known), as-of stats and range | `cutoff`, `window_days`, `min_days`, `lower_pct`, `upper_pct` |
+| `GET /api/metrics` | Accuracy metrics and breakdowns over the whole period or a range | `cutoff`, `start`, `end` |
+| `GET /api/backtest` | Share of actuals inside the as-of range, per day and overall | `cutoff`, `window_days`, `min_days`, `lower_pct`, `upper_pct` |
 
 ## Running locally
 
@@ -63,8 +113,9 @@ Without Docker:
 ```bash
 # backend
 cd backend
-python3 -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate   # Windows PowerShell: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+python -m app.forecast_data        # fetch and cache Elexon data into backend/data/ (first run only)
 uvicorn app.main:app --reload
 
 # frontend
@@ -83,5 +134,6 @@ AI tools (Claude Code & Copilot) were used to assist with some tasks in this pro
 - project setup and scaffolding
 - documentation
 - bugfixing
+- in analysis.py for implementing functions to design functions for analytics that I had defined in my product description, such as as-of error stats
 
 All outputs were reviewed by me.
