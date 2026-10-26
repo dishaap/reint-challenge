@@ -110,3 +110,51 @@ def identify_data_gaps(actuals: pd.DataFrame, forecasts: pd.DataFrame, table: pd
         "merged_in_table": int(len(table))
     }
 
+""" EVALUATE ERROR METRICS FUNCTIONS """
+# evaluate error metrics to predict accuracy for a set of decision rows (all in MW unless noted)
+# description of error metric being evaluated given via in-line comments
+def error_metrics(t: pd.DataFrame) -> dict:
+    if t.empty:
+        return {
+            "n": 0
+        }
+
+    e = t["error"]
+    mae = float(t["abs_error"].mean())
+    mean_actual = float(t["actual"].mean())
+
+    out = {
+        "n": int(len(t)),
+        "mae": mae,
+        "rmse": float(np.sqrt((e**2).mean())),
+        "bias": float(e.mean()),
+        "nmae_pct": 100 * mae / mean_actual if mean_actual > 0 else None, # MAE as % of actual
+        "over_forecast_share": float((e > 0).mean()),
+        "mean_over_forecast": float(e[e > 0].mean()) if (e > 0).any() else 0.0,
+        "mean_under_forecast": float(e[e < 0].mean()) if (e < 0).any() else 0.0,
+        "abs_error_p90": float(np.percentile(t["abs_error"], 90)),
+    }
+
+    for p in PERCENTILES:
+        out[f"error_p{p}"] = float(np.percentile(e, p))
+
+    return out
+
+# evaluate error statistics for each time of day that data was published
+def by_time_of_Day(t: pd.DataFrame) -> pd.DataFrame:
+    return _grouped(t, "time_of_day")
+
+# evaluate error statistics by horizon intervals
+def by_horizon(t: pd.DataFrame) -> pd.DataFrame:
+    intervals = pd.cut(t["horizon_h"], bins=HORIZON_INTERVALS, labels=HORIZON_LABELS, right=False)
+    return _grouped(t.assign(horizon_bucket=intervals), "horizon_bucket")
+
+# evaluate error by actual wind output interval (low, medium, high)
+def by_wind_level(t: pd.DataFrame) -> pd.DataFrame:
+    intervals = pd.qcut(t["actual"], 3, levels=["low", "medium", "high"])
+    return _grouped(t.assign(wind_level=intervals), "wind_level")
+
+# evaluate error of forecast for a day
+def by_day(t: pd.DataFrame) -> pd.DataFrame:
+    return _grouped(t, "date_of_forecast")
+
