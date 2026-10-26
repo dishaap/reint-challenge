@@ -79,4 +79,9 @@ npm run dev
 
 ## AI Declaration
 
-AI tools (Claude by Anthropic) were used to assist with this project, including project setup and scaffolding, and documentation. All outputs were reviewed by me.
+AI tools (Claude Code & Copilot) were used to assist with some tasks in this project, including:
+- project setup and scaffolding
+- documentation
+- bugfixing
+
+All outputs were reviewed by me.
