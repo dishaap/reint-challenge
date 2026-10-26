@@ -18,17 +18,20 @@ def _to_frames(rows: list[dict]) -> pd.DataFrame:
     df = pd.DataFrame(rows)
     df["startTime"] = pd.to_datetime(df["startTime"], utc=True)
     df["publishTime"] = pd.to_datetime(df["publishTime"], utc=True)
+    return df
 
 # reformat cutoff time to pandas format
 def _cutoff_offset(cutoff: time) -> pd.Timedelta:
     return pd.Timedelta(hours=cutoff.hour, minutes=cutoff.minute)
 
 # make timestamp for cutoff for a target time (cutoff time is standardized at a certain time on the previous day - customizable or at 12:00 UTC)
-def _cutoff_time_for(start_times: pd.Series, cutoff: time = DEFAULT_CUTOFF):
-    return start_times.dt.normalize() - pd.Timedelta(days=1) + _cutoff_offset(cutoff)
-
-def _cutoff_time_for(forecast_date: date, cutoff: time = DEFAULT_CUTOFF):
-    return pd.Timestamp(forecast_date, tz="UTC") - pd.Timedelta(days=1) + _cutoff_offset(cutoff)
+# accepts either a Series of target timestamps (returns a Series) or a single date (returns a Timestamp)
+def _cutoff_time_for(target, cutoff: time = DEFAULT_CUTOFF):
+    if isinstance(target, pd.Series):
+        day = target.dt.normalize()
+    else:
+        day = pd.Timestamp(target, tz="UTC")
+    return day - pd.Timedelta(days=1) + _cutoff_offset(cutoff)
 
 # group actual + latest forecast table by a key param and grab error statistics for the group
 def _grouped(t: pd.DataFrame, key) -> pd.DataFrame:
@@ -40,7 +43,7 @@ def _grouped(t: pd.DataFrame, key) -> pd.DataFrame:
             "rmse": g["error"].apply(lambda s: float(np.sqrt((s**2).mean()))),
             "bias": g["error"].mean(),
         }
-    )
+    ).reset_index()
 
 # retrieve history of actual/forecast data known at cutoff time for the given date. considers any custom window provided by user on how far back history should go, and any lag on published data
 def _window_history(
@@ -141,7 +144,7 @@ def error_metrics(t: pd.DataFrame) -> dict:
     return out
 
 # evaluate error statistics for each time of day that data was published
-def by_time_of_Day(t: pd.DataFrame) -> pd.DataFrame:
+def by_time_of_day(t: pd.DataFrame) -> pd.DataFrame:
     return _grouped(t, "time_of_day")
 
 # evaluate error statistics by horizon intervals
@@ -151,7 +154,7 @@ def by_horizon(t: pd.DataFrame) -> pd.DataFrame:
 
 # evaluate error by actual wind output interval (low, medium, high)
 def by_wind_level(t: pd.DataFrame) -> pd.DataFrame:
-    intervals = pd.qcut(t["actual"], 3, levels=["low", "medium", "high"])
+    intervals = pd.qcut(t["actual"], 3, labels=["low", "medium", "high"])
     return _grouped(t.assign(wind_level=intervals), "wind_level")
 
 # evaluate error of forecast for a day
@@ -239,7 +242,7 @@ if __name__ == "__main__":
     actual, forecast = create_tuples(get_actual(), get_forecast())
     t = build_decision_table(actual, forecast)
 
-    print("data gaps: ", identify_data_gaps(actual, forecast))
+    print("data gaps: ", identify_data_gaps(actual, forecast, t))
     print("error overview: ", error_metrics(t))
     print("error grouped by horizon intervals: ", by_horizon(t))
 
