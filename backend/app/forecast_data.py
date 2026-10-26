@@ -7,7 +7,7 @@ ELEXON_URL = "https://data.elexon.co.uk/bmrs/api/v1/datasets"
 WINDOW_DAYS = 7 # retrieve data in chunks to reduce response size
 
 START_DATE = datetime(2026, 1, 1, tzinfo=timezone.utc)
-END_DATE = datetime(2026, 1, 2, tzinfo=timezone.utc)
+END_DATE = datetime(2026, 2, 1, tzinfo=timezone.utc)
 FORECAST_BOUNDARY = 4 # max number of days to look back for a day's forecast
 
 CACHE_DIR = Path(__file__).resolve().parent.parent / "data" # create path for cache
