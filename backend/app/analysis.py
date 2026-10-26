@@ -28,7 +28,7 @@ def _cutoff_time_for(start_times: pd.Series, cutoff: time = DEFAULT_CUTOFF):
     return start_times.dt.normalize() - pd.Timedelta(days=1) + _cutoff_offset(cutoff)
 
 def _cutoff_time_for(forecast_date: date, cutoff: time = DEFAULT_CUTOFF):
-    return pd.Timestamp(delivery_date, tz="UTC") - pd.Timedelta(days=1) + _cutoff_offset(cutoff)
+    return pd.Timestamp(forecast_date, tz="UTC") - pd.Timedelta(days=1) + _cutoff_offset(cutoff)
 
 # group actual + latest forecast table by a key param and grab error statistics for the group
 def _grouped(t: pd.DataFrame, key) -> pd.DataFrame:
@@ -146,7 +146,7 @@ def by_time_of_Day(t: pd.DataFrame) -> pd.DataFrame:
 
 # evaluate error statistics by horizon intervals
 def by_horizon(t: pd.DataFrame) -> pd.DataFrame:
-    intervals = pd.cut(t["horizon_h"], bins=HORIZON_INTERVALS, labels=HORIZON_LABELS, right=False)
+    intervals = pd.cut(t["horizon_hours"], bins=HORIZON_INTERVALS, labels=HORIZON_LABELS, right=False)
     return _grouped(t.assign(horizon_bucket=intervals), "horizon_bucket")
 
 # evaluate error by actual wind output interval (low, medium, high)
@@ -158,3 +158,93 @@ def by_wind_level(t: pd.DataFrame) -> pd.DataFrame:
 def by_day(t: pd.DataFrame) -> pd.DataFrame:
     return _grouped(t, "date_of_forecast")
 
+""" AS-OF MARGINS (ERROR AVAILABLE AT CUTOFF TIME) """
+
+# get error metrics for defined window upto cutoff time
+def asof_error_stats(
+    t: pd.DataFrame,
+    forecast_date: date,
+    cutoff: time = DEFAULT_CUTOFF,
+    window_days: int | None = None,
+    min_days: int = 3,
+    actual_lag_hours: float = 0.0,
+) -> dict:
+    h = _window_history(t, forecast_date, cutoff, window_days, actual_lag_hours)
+    days_count = int(h["startTime"].dt.date.nunique())
+    if days_count < min_days:
+        return {
+            "status": "insufficient_history", 
+            "history_days": days_count,
+            "n": int(len(h))
+        }
+    return {
+        "status": "ok",
+        "history_days": days_count,
+        **error_metrics(h)
+    }
+
+# calculate and return a possible range for actual generation on a given date from past error percentiles. 
+# error = forecast - actual, therefore band = [forecast - P_upper(error), forecast -P_lower(error)]
+# same error distribution is applied to every 30-min interval.
+# returns None if history is too short. percentile determined by user or defaults to 5 and 95
+def forecast_band(
+        t: pd.DataFrame,
+        forecast_date: date,
+        cutoff: time = DEFAULT_CUTOFF,
+        window_days: int | None = None,
+        min_days: int = 3,
+        lower_pct: float = 5.0,
+        upper_pct: float = 95.0,
+        actual_lag_hours: float = 0.0,
+) -> pd.DataFrame | None:
+    h = _window_history(t, forecast_date, cutoff, window_days, actual_lag_hours)
+
+    if h["startTime"].dt.date.nunique() < min_days:
+        return None
+
+    e_lo, e_hi = np.percentile(h["error"], [lower_pct, upper_pct])
+    day = t[t["date_of_forecast"] == forecast_date]
+    out = day[["startTime", "publishTime", "horizon_hours", "forecast", "actual"]].copy()
+    out["lower"] = (out["forecast"] - e_hi).clip(lower=0)
+    out["upper"] = out["forecast"] - e_lo
+    return out.reset_index(drop=True)
+
+# analysis on whether forecast bands included actual generation. 
+def backtest_coverage(
+        t: pd.DataFrame,
+        cutoff: time = DEFAULT_CUTOFF,
+        window_days: int | None = None,
+        min_days: int = 3,
+        lower_pct: float = 5,
+        upper_pct: float = 95
+) -> tuple[pd.DataFrame, float | None]:
+    rows = []
+    for d in sorted(t["date_of_forecast"].unique()):
+        band = forecast_band(t, d, cutoff, window_days, min_days, lower_pct, upper_pct)
+        if band is None or band.empty:
+            continue
+        inside = (band["actual"] >= band["lower"]) & (band["actual"] <= band["upper"])
+        rows.append({"date_of_forecast": d, "n": len(band), "n_inside": int(inside.sum())})
+    per_day = pd.DataFrame(rows)
+    if per_day.empty:
+        return per_day, None
+    per_day["coverage"] = per_day["n_inside"] / per_day["n"]
+    overall = float(per_day["n_inside"].sum() / per_day["n"].sum())
+    return per_day, overall
+
+
+if __name__ == "__main__":
+    from .forecast_data import get_actual, get_forecast
+
+    actual, forecast = create_tuples(get_actual(), get_forecast())
+    t = build_decision_table(actual, forecast)
+
+    print("data gaps: ", identify_data_gaps(actual, forecast))
+    print("error overview: ", error_metrics(t))
+    print("error grouped by horizon intervals: ", by_horizon(t))
+
+    last_day = t["date_of_forecast"].max()
+    print("as-of stats for ", last_day, ": ", asof_error_stats(t, last_day))
+
+    per_day, overall_coverage = backtest_coverage(t)
+    print("backtest coverage (nominal 90%): ", overall_coverage)
