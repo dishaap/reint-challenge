@@ -1,3 +1,5 @@
+import Filters from "../components/Filters";
+
 export default function Accuracy() {
-    return <p>Accuracy page placeholder</p>
+    return <Filters view="accuracy" />
 }

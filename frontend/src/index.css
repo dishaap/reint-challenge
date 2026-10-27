@@ -3,7 +3,7 @@
 :root {
   --color-1: #f2f2f2;
   --color-2: #cbcbcb;
-  --color-3: #174d38;
+  --color-3: rgb(23, 77, 56);
   --color-4: #4d1717;
   --text-dark: #5a5a5a;
   --text-light: var(--color-1);
