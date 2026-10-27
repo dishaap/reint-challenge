@@ -131,11 +131,12 @@ The frontend and FastAPI backend deploy together as one Vercel project. The fron
 For an existing Vercel project:
 
 1. Set **Root Directory** to the repository root (not `frontend`). This is required for Vercel to discover the root FastAPI entrypoint and Python dependencies.
-2. Set the **Build Command** to `npm ci --prefix frontend && npm run build --prefix frontend`, or leave it unset so Vercel uses the FastAPI build hook in [`pyproject.toml`](./pyproject.toml). Do not set an **Output Directory**: FastAPI's `app.frontend()` serves the built Vite files while keeping API routes available.
-3. Remove any `VITE_API_URL` value that points to `localhost`. Production builds use the same-origin FastAPI endpoints by default. Keep `VITE_API_URL` unset unless you are intentionally using a separately hosted API.
-4. Redeploy the project.
+2. Set **Framework Preset** to **FastAPI**.
+3. Leave the dashboard **Build Command**, **Install Command**, and **Output Directory** blank. Do not override FastAPI's build: Vercel runs the frontend build from [`pyproject.toml`](./pyproject.toml), and `app.frontend()` serves the generated files while keeping API routes available. CDN promotion is disabled so FastAPI serves frontend assets directly rather than relying on Vercel's static-file collection.
+4. Remove any `VITE_API_URL` value that points to `localhost`. Production builds use the same-origin FastAPI endpoints by default. Keep `VITE_API_URL` unset unless you are intentionally using a separately hosted API.
+5. Redeploy the project.
 
-The deployment uses the root [`app.py`](./app.py) entrypoint, installs Python dependencies from [`requirements.txt`](./requirements.txt), builds the Vite app, and serves the API and frontend on the same deployment.
+The deployment uses the root [`app.py`](./app.py) entrypoint, installs runtime dependencies directly from the root [`requirements.txt`](./requirements.txt), builds the Vite app through the FastAPI build hook, and serves the API and frontend on the same deployment. In the build log, expect to see the frontend `npm ci` and `vite build` commands run; if Vercel finishes in milliseconds without them, it did not use this repository root/configuration.
 
 For local development, continue running FastAPI and Vite separately as described above.
 

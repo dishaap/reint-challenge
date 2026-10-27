@@ -2,4 +2,4 @@
 build = "npm ci --prefix frontend && npm run build --prefix frontend"
 
 [tool.vercel.fastapi.static]
-cdn = true
+cdn = false
