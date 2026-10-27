@@ -63,10 +63,11 @@ def fetch_forecast() -> list[dict]:
 
 # read and write to cache
 def _cache(name: str, fetch, refresh: bool = False) -> list[dict]:
-    CACHE_DIR.mkdir(exist_ok=True)
     path = CACHE_DIR / f"{name}.json"
     if path.exists() and not refresh:
         return json.loads(path.read_text())
+
+    CACHE_DIR.mkdir(exist_ok=True)
     rows = fetch()
     path.write_text(json.dumps(rows))
     return rows

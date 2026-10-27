@@ -209,7 +209,11 @@ export default function DayAheadView({ filters, onFiltersChange }) {
             setForecastBand(null)
 
             try {
-                const apiBase = (import.meta.env.VITE_API_URL || "http://localhost:8000")
+                const configuredApiUrl = import.meta.env.VITE_API_URL?.trim()
+                const isLocalhostUrl = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredApiUrl || "")
+                const apiBase = (import.meta.env.PROD && isLocalhostUrl
+                    ? ""
+                    : configuredApiUrl || (import.meta.env.DEV ? "http://localhost:8000" : ""))
                     .replace(/\/+$/, "")
                 const response = await fetch(
                     `${apiBase}/api/forecast/${forecastDate}?${params}`,

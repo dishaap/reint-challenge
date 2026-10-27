@@ -112,6 +112,10 @@
   margin-top: 1rem;
 }
 
+.accuracy-distribution .section-header {
+  min-height: 7.5rem;
+}
+
 .accuracy-breakdown,
 .accuracy-breakdown-2 {
   align-items: stretch;
