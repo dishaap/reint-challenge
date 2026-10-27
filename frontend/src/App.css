@@ -71,20 +71,51 @@
 }
 
 .quick-take-copy {
-  font-size: 0.875rem;
+  font-size: 1.5rem;
   line-height: 1.6;
-}
-
-.quick-take-note {
-  margin-top: 1rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid currentColor;
-  font-size: 0.75rem;
-  opacity: 0.75;
+  text-align: left;
 }
 
 @media (max-width: 640px) {
-  .day-ahead-summary {
+  .day-ahead-summary, .forecast-stats {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.section-header {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  margin-top: 2.5rem;
+}
+
+.section-header-title {
+  font-size: 30px;
+  font-weight: 500;
+  color: var(--color-3);
+  margin-bottom: 0.75rem;
+}
+
+.section-header-subtitle {
+  font-size: 18px;
+  color: var(--text-dark);
+}
+
+.forecast-stats {
+  display: grid;
+  grid-template-columns: minmax(0, 2.5fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.forecast-stats > * {
+  min-width: 0;
+}
+
+.card-subtitle {
+  margin: 0 0 1rem;
+  text-align: left;
+  font-size: 0.8rem;
+  opacity: 0.8;
 }
