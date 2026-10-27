@@ -130,7 +130,7 @@ The frontend and FastAPI backend deploy together as one Vercel project. The fron
 
 For an existing Vercel project:
 
-1. Set **Root Directory** to the repository root (not `frontend`).
+1. Set **Root Directory** to the repository root (not `frontend`), so Vercel can discover the root FastAPI entrypoint. The build command also moves to the repository root if Vercel starts it from `frontend`.
 2. Leave the **Build Command** and **Output Directory** unset so Vercel uses [`vercel.json`](./vercel.json) and FastAPI's frontend integration.
 3. Remove any `VITE_API_URL` value that points to `localhost`. Production builds use the same-origin FastAPI endpoints by default. Keep `VITE_API_URL` unset unless you are intentionally using a separately hosted API.
 4. Redeploy the project.
