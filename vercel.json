@@ -1,4 +1,3 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "test -f app.py && npm ci --prefix frontend && npm run build --prefix frontend"
+  "$schema": "https://openapi.vercel.sh/vercel.json"
 }
