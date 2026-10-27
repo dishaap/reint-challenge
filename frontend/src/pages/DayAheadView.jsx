@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import Filters from "../components/Filters";
 import Card from "../components/Card";
 import ForecastTable from "../components/ForecastTable";
+import "./DayAheadView.css";
 
+const CHART_WIDTH = 900
+const CHART_HEIGHT = 320
+const CHART_MARGIN = { top: 16, right: 18, bottom: 48, left: 72 }
 
 function getPreviousDate(date) {
     if (!date) return ""
@@ -61,6 +65,249 @@ function formatTime(dateTime) {
     }).format(parsedDate)
 }
 
+function chartY(value, max, plotTop, plotHeight) {
+    return plotTop + plotHeight - (value / max) * plotHeight
+}
+
+function formatAxisValue(value) {
+    return Math.round(value).toLocaleString()
+}
+
+function formatCadence(milliseconds) {
+    const minutes = Math.round(milliseconds / 60000)
+    if (minutes === 30) return "Half-hourly data"
+    if (minutes === 60) return "Hourly data"
+    if (minutes % 60 === 0) return `${minutes / 60}-hourly data`
+    return `${minutes}-minute data`
+}
+
+function ForecastChart({ rows, loading, error, forecastDate, band }) {
+    if (!forecastDate) {
+        return <p className="day-ahead-chart-message">Select a forecast date to view the chart.</p>
+    }
+    if (loading) {
+        return <p className="day-ahead-chart-message" role="status">Loading forecast chart…</p>
+    }
+    if (error) {
+        return <p className="day-ahead-chart-message" role="alert">Could not load forecast chart: {error}</p>
+    }
+
+    const points = rows
+        .map((row) => ({
+            ...row,
+            timestamp: Date.parse(row.startTime),
+        }))
+        .filter((row) => Number.isFinite(row.timestamp))
+        .sort((a, b) => a.timestamp - b.timestamp)
+    const forecastPoints = points.filter((row) =>
+        typeof row.forecast === "number" && Number.isFinite(row.forecast),
+    )
+
+    if (forecastPoints.length === 0) {
+        return <p className="day-ahead-chart-message">No forecasts are available for this date and cutoff.</p>
+    }
+
+    const chartRows = points
+    const plotLeft = CHART_MARGIN.left
+    const plotTop = CHART_MARGIN.top
+    const plotWidth = CHART_WIDTH - CHART_MARGIN.left - CHART_MARGIN.right
+    const plotHeight = CHART_HEIGHT - CHART_MARGIN.top - CHART_MARGIN.bottom
+    const startTime = chartRows[0].timestamp
+    const endTime = chartRows[chartRows.length - 1].timestamp
+    const timeSpan = endTime - startTime
+    const x = (timestamp) => plotLeft + (
+        timeSpan > 0 ? ((timestamp - startTime) / timeSpan) * plotWidth : plotWidth / 2
+    )
+    const intervals = chartRows.slice(1)
+        .map((row, index) => row.timestamp - chartRows[index].timestamp)
+        .filter((interval) => interval > 0)
+        .sort((a, b) => a - b)
+    const expectedInterval = intervals.length > 0
+        ? intervals[Math.floor(intervals.length / 2)]
+        : 30 * 60 * 1000
+    const maxGap = expectedInterval * 1.5
+    const maxValue = Math.max(
+        ...forecastPoints.flatMap((row) => [
+            row.forecast,
+            row.lower,
+            row.upper,
+        ].filter((value) => typeof value === "number" && Number.isFinite(value))),
+    )
+    const yStep = Math.max(1000, Math.ceil(maxValue / 4 / 1000) * 1000)
+    const yMax = yStep * 4
+    const yTicks = Array.from({ length: 5 }, (_, index) => yStep * index)
+    const forecastPaths = []
+    let forecastSegment = []
+    const rangePaths = []
+    let rangeSegment = []
+
+    function finishForecastSegment() {
+        if (forecastSegment.length > 0) {
+            forecastPaths.push(forecastSegment
+                .map((row, index) =>
+                    `${index === 0 ? "M" : "L"} ${x(row.timestamp)} ${chartY(row.forecast, yMax, plotTop, plotHeight)}`,
+                )
+                .join(" "))
+        }
+        forecastSegment = []
+    }
+
+    function finishRangeSegment() {
+        if (rangeSegment.length >= 2) {
+            const upperPath = rangeSegment
+                .map((row, index) => `${index === 0 ? "M" : "L"} ${x(row.timestamp)} ${chartY(row.upper, yMax, plotTop, plotHeight)}`)
+                .join(" ")
+            const lowerPath = [...rangeSegment]
+                .reverse()
+                .map((row) => `L ${x(row.timestamp)} ${chartY(row.lower, yMax, plotTop, plotHeight)}`)
+                .join(" ")
+            rangePaths.push(`${upperPath} ${lowerPath} Z`)
+        }
+        rangeSegment = []
+    }
+
+    chartRows.forEach((row, index) => {
+        const previousRow = chartRows[index - 1]
+        const gapIsTooLarge = previousRow && row.timestamp - previousRow.timestamp > maxGap
+        if (gapIsTooLarge) {
+            finishForecastSegment()
+            finishRangeSegment()
+        }
+
+        if (typeof row.forecast === "number" && Number.isFinite(row.forecast)) {
+            forecastSegment.push(row)
+        } else {
+            finishForecastSegment()
+        }
+
+        if (
+            typeof row.lower === "number" &&
+            Number.isFinite(row.lower) &&
+            typeof row.upper === "number" &&
+            Number.isFinite(row.upper)
+        ) {
+            rangeSegment.push(row)
+        } else {
+            finishRangeSegment()
+        }
+    })
+    finishForecastSegment()
+    finishRangeSegment()
+
+    const firstDate = new Date(startTime)
+    const dayStart = Date.UTC(
+        firstDate.getUTCFullYear(),
+        firstDate.getUTCMonth(),
+        firstDate.getUTCDate(),
+    )
+    const xTickTimes = [
+        startTime,
+        ...Array.from({ length: 6 }, (_, index) => dayStart + index * 4 * 60 * 60 * 1000)
+            .filter((timestamp) => timestamp > startTime && timestamp < endTime),
+        ...(endTime > startTime ? [endTime] : []),
+    ]
+    const rangeAvailable = band?.available && rangePaths.length > 0
+
+    return (
+        <div className="day-ahead-chart">
+            <div className="day-ahead-chart-legend" aria-label="Chart legend">
+                <span><i className="day-ahead-legend-forecast" /> Forecast</span>
+                <span>
+                    <i className="day-ahead-legend-range" />
+                    {rangeAvailable
+                        ? `P${band.lower_pct}–P${band.upper_pct} range`
+                        : "Percentile range unavailable"}
+                </span>
+                {intervals.length > 0 && (
+                    <span className="day-ahead-chart-cadence">
+                        {formatCadence(expectedInterval)}
+                    </span>
+                )}
+            </div>
+            <div className="day-ahead-chart-scroll">
+                <svg
+                    className="day-ahead-chart-svg"
+                    viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
+                    role="img"
+                    aria-label={`Forecast generation for ${forecastDate}${intervals.length > 0 ? `, ${formatCadence(expectedInterval)}` : ""}${rangeAvailable ? ` with the P${band.lower_pct} to P${band.upper_pct} historical error range` : ""}`}
+                >
+                    {yTicks.map((tick) => {
+                        const y = chartY(tick, yMax, plotTop, plotHeight)
+                        return (
+                            <g key={tick}>
+                                <line
+                                    x1={plotLeft}
+                                    x2={CHART_WIDTH - CHART_MARGIN.right}
+                                    y1={y}
+                                    y2={y}
+                                    className="day-ahead-chart-gridline"
+                                />
+                                <text
+                                    x={plotLeft - 10}
+                                    y={y + 4}
+                                    textAnchor="end"
+                                    className="day-ahead-chart-axis-label"
+                                >
+                                    {formatAxisValue(tick)}
+                                </text>
+                            </g>
+                        )
+                    })}
+                    <text
+                        x="15"
+                        y={plotTop + plotHeight / 2}
+                        transform={`rotate(-90 15 ${plotTop + plotHeight / 2})`}
+                        textAnchor="middle"
+                        className="day-ahead-chart-axis-title"
+                    >
+                        Generation (MW)
+                    </text>
+                    {rangePaths.map((path, index) => (
+                        <path key={`range-${index}`} d={path} className="day-ahead-chart-range" />
+                    ))}
+                    {forecastPaths.map((path, index) => (
+                        <path key={`forecast-${index}`} d={path} className="day-ahead-chart-forecast" />
+                    ))}
+                    {forecastPoints.map((row) => (
+                        typeof row.forecast === "number" && Number.isFinite(row.forecast) ? (
+                            <circle
+                                key={row.startTime}
+                                cx={x(row.timestamp)}
+                                cy={chartY(row.forecast, yMax, plotTop, plotHeight)}
+                                r="2.5"
+                                className="day-ahead-chart-point"
+                            >
+                                <title>
+                                    {`${formatTime(row.startTime)} UTC · Forecast ${formatMegawatts(row.forecast)}${typeof row.lower === "number" && typeof row.upper === "number" ? ` · P${band.lower_pct}–P${band.upper_pct} ${formatMegawatts(row.lower)}–${formatMegawatts(row.upper)}` : ""}`}
+                                </title>
+                            </circle>
+                        ) : null
+                    ))}
+                    {xTickTimes.map((timestamp) => (
+                        <text
+                            key={timestamp}
+                            x={x(timestamp)}
+                            y={CHART_HEIGHT - 20}
+                            textAnchor="middle"
+                            className="day-ahead-chart-axis-label"
+                        >
+                            {formatTime(timestamp)}
+                        </text>
+                    ))}
+                    <text
+                        x={plotLeft + plotWidth / 2}
+                        y={CHART_HEIGHT - 2}
+                        textAnchor="middle"
+                        className="day-ahead-chart-axis-title"
+                    >
+                        Forecast time (UTC)
+                    </text>
+                </svg>
+            </div>
+        </div>
+    )
+}
+
 function getDailyMetrics(rows) {
     const validRows = rows.filter(
         (row) => typeof row.forecast === "number" && Number.isFinite(row.forecast),
@@ -97,7 +344,7 @@ function getDailyMetrics(rows) {
         {
             label: "Average",
             value: formatMegawatts(average),
-            detail: `Across ${validRows.length} half-hours`,
+            detail: `Across ${validRows.length} forecast periods`,
         },
         {
             label: "Forecast age",
@@ -162,7 +409,7 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                     : "—"
                 : `${filters.history === "Past 7 days" ? 7 : 14}-day window`,
             detail: visibleStats
-                ? `${visibleStats.n.toLocaleString()} half-hours in selected history`
+                ? `${visibleStats.n.toLocaleString()} matched forecast periods in selected history`
                 : "Select a forecast date",
         },
         {
@@ -308,7 +555,7 @@ export default function DayAheadView({ filters, onFiltersChange }) {
             </section>
             <div>
                 <div className="section-header">
-                    <p className="section-header-title">Forecast generation by half-hour</p>
+                    <p className="section-header-title">Forecast generation over delivery day</p>
                     <p className="section-header-subtitle">
                         {forecastDate
                             ? `Latest forecast available at ${filters.cutoffTime || "12:00"} UTC on ${formatDate(decisionDate)} for ${formatDate(forecastDate)}, with the range implied by past errors.`
@@ -316,7 +563,15 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                     </p>
                 </div>
                 <section className="forecast-stats">
-                    <Card tone="light" eyebrow="Graph"></Card>
+                    <Card tone="light" eyebrow="Graph" className="day-ahead-chart-card">
+                        <ForecastChart
+                            rows={forecastRows}
+                            loading={isLoadingForecasts}
+                            error={forecastError}
+                            forecastDate={forecastDate}
+                            band={visibleBand}
+                        />
+                    </Card>
                     <Card
                         tone="rose"
                         title={formatDate(forecastDate)}
@@ -332,7 +587,7 @@ export default function DayAheadView({ filters, onFiltersChange }) {
             </div>
             <div>
                 <div className="section-header">
-                    <p className="section-header-title">Half-Hour Forecast Table</p>
+                    <p className="section-header-title">Forecast Table</p>
                     <p className="section-header-subtitle">
                         {forecastDate
                             ? `Latest forecast available at ${filters.cutoffTime || "12:00"} UTC on ${formatDate(decisionDate)} for ${formatDate(forecastDate)}, in table format.`

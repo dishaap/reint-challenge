@@ -1,0 +1,108 @@
+.day-ahead-chart-card {
+  min-height: 25rem;
+}
+
+.day-ahead-chart {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  padding-top: 0.5rem;
+}
+
+.day-ahead-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  color: var(--text-dark);
+  font-size: 0.75rem;
+}
+
+.day-ahead-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.day-ahead-legend-forecast,
+.day-ahead-legend-range {
+  display: inline-block;
+  width: 1rem;
+  height: 0.65rem;
+}
+
+.day-ahead-legend-forecast {
+  height: 2px;
+  background: #245c4b;
+}
+
+.day-ahead-legend-range {
+  border-radius: 2px;
+  background: #d3ded9;
+}
+
+.day-ahead-chart-scroll {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.day-ahead-chart-svg {
+  display: block;
+  width: 100%;
+  min-width: 34rem;
+  overflow: visible;
+}
+
+.day-ahead-chart-gridline {
+  stroke: #e5e9e6;
+  stroke-width: 1;
+}
+
+.day-ahead-chart-axis-label,
+.day-ahead-chart-axis-title {
+  fill: #59645e;
+  font-family: inherit;
+  font-size: 11px;
+}
+
+.day-ahead-chart-axis-title {
+  font-size: 10px;
+}
+
+.day-ahead-chart-range {
+  fill: #d3ded9;
+  opacity: 0.78;
+}
+
+.day-ahead-chart-forecast {
+  fill: none;
+  stroke: #245c4b;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.day-ahead-chart-point {
+  fill: #245c4b;
+  stroke: #fff;
+  stroke-width: 1;
+}
+
+.day-ahead-chart-message {
+  display: grid;
+  flex: 1;
+  min-height: 18rem;
+  place-items: center;
+  margin: 0;
+  color: var(--text-dark);
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .day-ahead-chart-card {
+    min-height: 22rem;
+    padding-inline: 1rem;
+  }
+}
