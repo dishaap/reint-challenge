@@ -29,6 +29,7 @@
   border-radius: 30px;
   cursor: pointer;
   font: inherit;
+  transition: background-color 0.3s ease;
 }
 
 .header-menu-item:hover,
@@ -36,4 +37,8 @@
   border: 1px solid var(--color-3);
   color: var(--color-3);
   background: var(--color-1);
+}
+
+.page-content {
+  padding: 2rem;
 }

@@ -1,11 +1,7 @@
-import { useState } from 'react'
-
-export default function Header({ title, menu }) {
-    const [activeItem, setActiveItem] = useState(menu[0] ?? null)
-
+export default function Header({ menu, activeItem, onSelect }) {
     return(
         <div className="header">
-            <h1 className="page-title">{title}</h1>
+            <h1 className="page-title">{activeItem}</h1>
             <div className="header-menu">
                 {menu.map((item) => (
                     <button
@@ -13,7 +9,7 @@ export default function Header({ title, menu }) {
                         type="button"
                         className={`header-menu-item${activeItem === item ? ' active' : ''}`}
                         aria-pressed={activeItem === item}
-                        onClick={() => setActiveItem(item)}
+                        onClick={() => onSelect(item)}
                     >
                         {item}
                     </button>
