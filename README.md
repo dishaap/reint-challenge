@@ -136,7 +136,7 @@ For an existing Vercel project:
 4. Remove any `VITE_API_URL` value that points to `localhost`. Production builds use the same-origin FastAPI endpoints by default. Keep `VITE_API_URL` unset unless you are intentionally using a separately hosted API.
 5. Redeploy the project.
 
-The deployment uses the root [`app.py`](./app.py) entrypoint, installs runtime dependencies directly from the root [`requirements.txt`](./requirements.txt), builds the Vite app through the FastAPI build hook, and serves the API and frontend on the same deployment. In the build log, expect to see the frontend `npm ci` and `vite build` commands run; if Vercel finishes in milliseconds without them, it did not use this repository root/configuration.
+The deployment uses the root [`app.py`](./app.py) entrypoint, installs runtime dependencies from [`pyproject.toml`](./pyproject.toml), builds the Vite app through the FastAPI build hook, and serves the API and frontend on the same deployment. The root [`requirements.txt`](./requirements.txt) mirrors those runtime dependencies for tools that use pip. In the build log, expect to see the frontend `npm ci` and `vite build` commands run; if Vercel finishes in milliseconds without them, it did not use this repository root/configuration.
 
 For local development, continue running FastAPI and Vite separately as described above.
 
