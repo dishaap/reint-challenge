@@ -111,7 +111,7 @@ export default function Filters({ view, values, onChange }) {
                                     type="range"
                                     aria-label="Lower percentile"
                                     min="0"
-                                    max={percentiles.upper}
+                                    max={Math.max(0, percentiles.upper - 5)}
                                     step="5"
                                     value={percentiles.lower}
                                     className="percentile-slider-input lower"
@@ -127,7 +127,7 @@ export default function Filters({ view, values, onChange }) {
                                 <input
                                     type="range"
                                     aria-label="Upper percentile"
-                                    min={percentiles.lower}
+                                    min={Math.min(100, percentiles.lower + 5)}
                                     max="100"
                                     step="5"
                                     value={percentiles.upper}

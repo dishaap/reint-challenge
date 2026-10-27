@@ -135,6 +135,9 @@ def metrics(
         "by_horizon": _safe(analysis.by_horizon, t),
         "by_wind_level": _safe(analysis.by_wind_level, t),
         "by_day": _safe(analysis.by_day, t),
+        "rows": _json(
+            t[["startTime", "publishTime", "forecast", "actual", "horizon_hours"]]
+        ),
     }
 
 # check whether as of ranges contain the actual generation data
@@ -145,10 +148,16 @@ def backtest(
     min_days: int = Query(3, ge=1),
     lower_pct: float = Query(5, ge=0, le=100),
     upper_pct: float = Query(95, ge=0, le=100),
+    start: date | None = None,
+    end: date | None = None,
 ):
     c, cs = _norm(cutoff)
     _check_pcts(lower_pct, upper_pct)
-    per_day, overall = analysis.backtest_coverage(_table(cs), c, window_days, min_days, lower_pct, upper_pct)
+    if start is not None and end is not None and start > end:
+        raise HTTPException(status_code=400, detail="start must be on or before end")
+    per_day, overall = analysis.backtest_coverage(
+        _table(cs), c, window_days, min_days, lower_pct, upper_pct, start, end
+    )
     return {
         "cutoff": cs,
         "nominal_coverage": (upper_pct - lower_pct) / 100,
