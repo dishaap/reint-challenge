@@ -144,8 +144,10 @@ For local development, continue running FastAPI and Vite separately as described
 
 AI tools (Claude Code & Copilot) were used to assist with some tasks in this project, including:
 - project setup and scaffolding
-- documentation
+- writing the instructions for deployment (prod and local)
 - bugfixing
 - in analysis.py for implementing functions to design functions for analytics that I had defined in my product description, such as as-of error stats
+- to implement the graphs using native svg rendering as Rechart did not work
+- to complete comment documentation for smoother knowledge transfer of codebase
 
 All outputs were reviewed by me.
