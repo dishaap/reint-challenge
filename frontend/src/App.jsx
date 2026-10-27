@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import './App.css'
 import Header from './components/Header.jsx'
-import About from './pages/About.jsx'
 import Accuracy from './pages/Accuracy.jsx'
 import DayAheadView from './pages/DayAheadView.jsx'
 
@@ -15,7 +14,7 @@ function createInitialFilters() {
 }
 
 function App() {
-    const menu = ["Day-Ahead View", "Accuracy", "About"]
+    const menu = ["Day-Ahead View", "Accuracy"]
     const [activePage, setActivePage] = useState(menu[0])
     const [filtersByView, setFiltersByView] = useState({
         'day-ahead': createInitialFilters(),
@@ -52,7 +51,6 @@ function App() {
                 onFiltersChange={(updates) => updateFilters('accuracy', updates)}
             />
         ),
-        About: <About />,
     }
 
     return (
