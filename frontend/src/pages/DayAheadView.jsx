@@ -529,7 +529,7 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                 onChange={onFiltersChange}
             />
             <section className="day-ahead-summary">
-                // quick summary of relevant historical stats and metadata on availability
+                {/* Quick summary of historical stats and data availability. */}
                 <Card
                     tone="green"
                     metrics={summaryMetrics}
@@ -538,7 +538,7 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                             : "No forecast date selected."}
                 />
 
-                // quick view on average, high, low of forecast for the date
+                {/* Daily forecast average, high, and low. */}
                 <Card
                     tone="rose"
                     eyebrow="Quick take"
@@ -584,7 +584,7 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                     </p>
                 </div>
 
-                // hourly forecast data represented as graph with area graph for hi-lo percentiles to understand error
+                {/* Hourly report samples with the selected percentile range. */}
                 <section className="forecast-stats">
                     <Card tone="light" eyebrow="Graph" className="day-ahead-chart-card">
                         <ForecastChart
@@ -596,7 +596,7 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                         />
                     </Card>
 
-                    // expanded version of quick take
+                    {/* Expanded daily forecast summary. */}
                     <Card
                         tone="rose"
                         title={formatDate(forecastDate)}
@@ -611,7 +611,7 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                 </section>
             </div>
             <div>
-                // hourly data represented as table
+                {/* Hourly report samples in tabular form. */}
                 <div className="section-header">
                     <p className="section-header-title">Forecast Table</p>
                     <p className="section-header-subtitle">
