@@ -24,7 +24,7 @@ def _to_frames(rows: list[dict]) -> pd.DataFrame:
 def _cutoff_offset(cutoff: time) -> pd.Timedelta:
     return pd.Timedelta(hours=cutoff.hour, minutes=cutoff.minute)
 
-# make timestamp for cutoff for a target time (cutoff time is standardized at a certain time on the previous day - customizable or at 12:00 UTC)
+# Build the target's decision cutoff at the selected time on the previous UTC day.
 # accepts either a Series of target timestamps (returns a Series) or a single date (returns a Timestamp)
 def _cutoff_time_for(target, cutoff: time = DEFAULT_CUTOFF):
     if isinstance(target, pd.Series):
@@ -55,6 +55,7 @@ def _window_history(
 ) -> pd.DataFrame:
     c = _cutoff_time_for(forecast_date, cutoff)
     known_by = c - pd.Timedelta(hours=actual_lag_hours)
+    # Include a period only after its full 30 minutes have elapsed by the decision time.
     h = t[t["startTime"] + PERIOD <= known_by]
     if window_days is not None:
         h = h[h["startTime"] >= c - pd.Timedelta(days=window_days)]
@@ -80,7 +81,7 @@ def create_tuples(actuals_rows: list[dict], forecasts_rows: list[dict]) -> tuple
 
     return actuals, forecasts
 
-# return latest forecasts published on or before the cutoff time for each target time
+# Keep the latest forecast per target, excluding publications after that target's cutoff.
 def filter_latest_forecasts(forecasts: pd.DataFrame, cutoff: time = DEFAULT_CUTOFF) -> pd.DataFrame:
     forecasts = forecasts.copy()
     forecasts["decisionTime"] = _cutoff_time_for(forecasts["startTime"], cutoff)

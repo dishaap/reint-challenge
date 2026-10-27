@@ -67,6 +67,7 @@ def _cache(name: str, fetch, refresh: bool = False) -> list[dict]:
     if path.exists() and not refresh:
         return json.loads(path.read_text())
 
+    # Fetch and persist only when the cache is missing or explicitly refreshed.
     CACHE_DIR.mkdir(exist_ok=True)
     rows = fetch()
     path.write_text(json.dumps(rows))

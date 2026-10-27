@@ -115,6 +115,7 @@ function ForecastChart({ rows, loading, error, forecastDate, band }) {
     const startTime = chartRows[0].timestamp
     const endTime = chartRows[chartRows.length - 1].timestamp
     const timeSpan = endTime - startTime
+    // use timestamps rather than row indexes so missing or irregular periods keep their real spacing.
     const x = (timestamp) => plotLeft + (
         timeSpan > 0 ? ((timestamp - startTime) / timeSpan) * plotWidth : plotWidth / 2
     )
@@ -122,6 +123,7 @@ function ForecastChart({ rows, loading, error, forecastDate, band }) {
         .map((row, index) => row.timestamp - chartRows[index].timestamp)
         .filter((interval) => interval > 0)
         .sort((a, b) => a - b)
+    // the median interval avoids treating an isolated missing period as the normal data cadence.
     const expectedInterval = intervals.length > 0
         ? intervals[Math.floor(intervals.length / 2)]
         : 30 * 60 * 1000
@@ -157,6 +159,7 @@ function ForecastChart({ rows, loading, error, forecastDate, band }) {
             const upperPath = rangeSegment
                 .map((row, index) => `${index === 0 ? "M" : "L"} ${x(row.timestamp)} ${chartY(row.upper, yMax, plotTop, plotHeight)}`)
                 .join(" ")
+            // trace the lower edge in reverse to close the polygon between upper and lower bounds.
             const lowerPath = [...rangeSegment]
                 .reverse()
                 .map((row) => `L ${x(row.timestamp)} ${chartY(row.lower, yMax, plotTop, plotHeight)}`)
@@ -166,6 +169,7 @@ function ForecastChart({ rows, loading, error, forecastDate, band }) {
         rangeSegment = []
     }
 
+    // break lines and bands at missing values or large time gaps rather than implying data between them.
     chartRows.forEach((row, index) => {
         const previousRow = chartRows[index - 1]
         const gapIsTooLarge = previousRow && row.timestamp - previousRow.timestamp > maxGap

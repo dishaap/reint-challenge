@@ -98,6 +98,7 @@ def forecast_for_day(
     day = day.merge(actuals, on="startTime", how="left")
     day["horizon_hours"] = (day["startTime"] - day["publishTime"]).dt.total_seconds() / 3600
  
+    # derive the band from cutoff-eligible historical errors, then join its bounds to the day's forecasts.
     band = analysis.forecast_band(t, forecast_date, c, window_days, min_days, lower_pct, upper_pct)
     cols = ["startTime", "publishTime", "horizon_hours", "forecast", "actual"]
     if band is not None:
