@@ -24,7 +24,7 @@ export default function ForecastTable({
         <section className="forecast-table-section">
             {!forecastDate ? (
                 <p className="forecast-table-message">
-                    Select a forecast date to view the half-hour forecasts.
+                    Select a forecast date to view forecasts.
                 </p>
             ) : loading ? (
                 <p className="forecast-table-message" role="status">
