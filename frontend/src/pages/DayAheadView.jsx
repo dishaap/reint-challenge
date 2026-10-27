@@ -4,13 +4,6 @@ import Card from "../components/Card";
 import ForecastTable from "../components/ForecastTable";
 
 
-const dailyMetrics = [
-    { label: "Peak", value: "12,272 MW", detail: "At 01:00 UTC" },
-    { label: "Lowest", value: "6,471 MW", detail: "At 12:00 UTC" },
-    { label: "Average", value: "9,927 MW", detail: "Across 48 half-hours" },
-    { label: "Forecast age", value: "12.5–36 h", detail: "Published 13 Jan, 11:30 UTC" },
-]
-
 function getPreviousDate(date) {
     if (!date) return ""
     
@@ -46,23 +39,150 @@ function formatDayMonth(date) {
     }).format(parsedDate)
 }
 
+function formatMegawatts(value, signed = false) {
+    if (typeof value !== "number" || !Number.isFinite(value)) return "—"
+
+    const rounded = Math.round(value)
+    const sign = signed && rounded > 0 ? "+" : ""
+    return `${sign}${rounded.toLocaleString()} MW`
+}
+
+function formatTime(dateTime) {
+    if (!dateTime) return "—"
+
+    const parsedDate = new Date(dateTime)
+    if (Number.isNaN(parsedDate.getTime())) return "—"
+
+    return new Intl.DateTimeFormat("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+        timeZone: "UTC",
+    }).format(parsedDate)
+}
+
+function getDailyMetrics(rows) {
+    const validRows = rows.filter(
+        (row) => typeof row.forecast === "number" && Number.isFinite(row.forecast),
+    )
+    if (validRows.length === 0) return []
+
+    const peak = validRows.reduce((highest, row) =>
+        row.forecast > highest.forecast ? row : highest,
+    )
+    const lowest = validRows.reduce((smallest, row) =>
+        row.forecast < smallest.forecast ? row : smallest,
+    )
+    const average = validRows.reduce((sum, row) => sum + row.forecast, 0) / validRows.length
+    const horizons = validRows
+        .map((row) => row.horizon_hours)
+        .filter((value) => typeof value === "number" && Number.isFinite(value))
+
+    function bandDetail(row) {
+        if (typeof row.lower !== "number" || typeof row.upper !== "number") return ""
+        return ` · range ${formatMegawatts(row.lower)}–${formatMegawatts(row.upper)}`
+    }
+
+    return [
+        {
+            label: "Peak",
+            value: formatMegawatts(peak.forecast),
+            detail: `At ${formatTime(peak.startTime)} UTC${bandDetail(peak)}`,
+        },
+        {
+            label: "Lowest",
+            value: formatMegawatts(lowest.forecast),
+            detail: `At ${formatTime(lowest.startTime)} UTC${bandDetail(lowest)}`,
+        },
+        {
+            label: "Average",
+            value: formatMegawatts(average),
+            detail: `Across ${validRows.length} half-hours`,
+        },
+        {
+            label: "Forecast age",
+            value: horizons.length > 0
+                ? `${Math.min(...horizons).toFixed(1)}–${Math.max(...horizons).toFixed(1)} h`
+                : "—",
+            detail: "Horizon across available forecasts",
+        },
+    ]
+}
+
 export default function DayAheadView({ filters, onFiltersChange }) {
     const forecastDate = filters.dates["Date of Forecast"] ?? ""
     const decisionDate = getPreviousDate(forecastDate)
     const [forecastRows, setForecastRows] = useState([])
+    const [historicalStats, setHistoricalStats] = useState(null)
+    const [forecastBand, setForecastBand] = useState(null)
     const [isLoadingForecasts, setIsLoadingForecasts] = useState(false)
     const [forecastError, setForecastError] = useState("")
     
+    const visibleStats = forecastDate ? historicalStats : null
+    const visibleBand = forecastDate ? forecastBand : null
+    const dailyMetrics = getDailyMetrics(forecastDate ? forecastRows : [])
+    const validForecasts = forecastDate
+        ? forecastRows.filter(
+            (row) => typeof row.forecast === "number" && Number.isFinite(row.forecast),
+        )
+        : []
+    const peakForecast = dailyMetrics.find((metric) => metric.label === "Peak")
+    const lowestForecast = dailyMetrics.find((metric) => metric.label === "Lowest")
+    const averageForecast = dailyMetrics.find((metric) => metric.label === "Average")
+    const peakRow = validForecasts.reduce(
+        (current, row) => !current || row.forecast > current.forecast ? row : current,
+        null,
+    )
+    const lowestRow = validForecasts.reduce(
+        (current, row) => !current || row.forecast < current.forecast ? row : current,
+        null,
+    )
+    const hasStats = visibleStats?.status === "ok"
+    const hasInsufficientHistory = visibleStats?.status === "insufficient_history"
     const summaryMetrics = [
         {
             label: "Data up to",
             value: `${formatDayMonth(decisionDate)}, ${filters.cutoffTime || "12:00"}`,
             detail: "UTC · D-1 cutoff",
         },
-        { label: "Forecast range", value: "Available", detail: "Built from 12 days of past errors" },
-        { label: "Historical MAE", value: "1,852 MW", detail: "Typical miss in this history" },
-        { label: "Bias", value: "+486 MW", detail: "Forecast ran slightly high" },
-        { label: "History used", value: "12 days", detail: "All available before cutoff" },
+        {
+            label: "Forecast range",
+            value: visibleBand === null ? "—" : visibleBand.available ? "Available" : "Unavailable",
+            detail: visibleBand?.available
+                ? `P${visibleBand.lower_pct}–P${visibleBand.upper_pct} range`
+                : visibleBand
+                    ? "Not enough eligible history"
+                    : "Select a forecast date",
+        },
+        {
+            label: "History used",
+            value: filters.history === "All available"
+                ? visibleStats
+                    ? `${visibleStats.history_days} days`
+                    : "—"
+                : `${filters.history === "Past 7 days" ? 7 : 14}-day window`,
+            detail: visibleStats
+                ? `${visibleStats.n.toLocaleString()} half-hours in selected history`
+                : "Select a forecast date",
+        },
+        {
+            label: "Bias",
+            value: hasStats ? formatMegawatts(historicalStats.bias, true) : "—",
+            detail: hasInsufficientHistory
+                ? "Not enough history"
+                : hasStats
+                    ? "Average forecast minus actual"
+                    : "Requires historical forecasts and actuals",
+        },
+        {
+            label: "Historical MAE",
+            value: hasStats ? formatMegawatts(historicalStats.mae) : "—",
+            detail: hasInsufficientHistory
+                ? "Not enough history"
+                : hasStats
+                    ? "Average absolute forecast error"
+                    : "Requires historical forecasts and actuals",
+        },
     ]
 
     useEffect(() => {
@@ -84,6 +204,9 @@ export default function DayAheadView({ filters, onFiltersChange }) {
         async function loadForecasts() {
             setIsLoadingForecasts(true)
             setForecastError("")
+            setForecastRows([])
+            setHistoricalStats(null)
+            setForecastBand(null)
 
             try {
                 const apiBase = (import.meta.env.VITE_API_URL || "http://localhost:8000")
@@ -101,11 +224,21 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                 if (!Array.isArray(result.rows)) {
                     throw new Error("The forecast API returned an invalid rows value.")
                 }
+                if (!result.asof_stats || typeof result.asof_stats !== "object") {
+                    throw new Error("The forecast API returned invalid historical statistics.")
+                }
+                if (!result.band || typeof result.band.available !== "boolean") {
+                    throw new Error("The forecast API returned invalid forecast range availability.")
+                }
 
                 setForecastRows(result.rows)
+                setHistoricalStats(result.asof_stats)
+                setForecastBand(result.band)
             } catch (error) {
                 if (!controller.signal.aborted) {
                     setForecastRows([])
+                    setHistoricalStats(null)
+                    setForecastBand(null)
                     setForecastError(error instanceof Error ? error.message : String(error))
                 }
             } finally {
@@ -131,7 +264,7 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                     tone="green"
                     metrics={summaryMetrics}
                     footer={decisionDate
-                            ? `Forecasts published after ${filters.cutoffTime || "12:00"} UTC on ${formatDate(decisionDate)} are not used.`
+                            ? `Forecasts published after ${filters.cutoffTime || "12:00"} UTC on ${formatDate(decisionDate)} are not used. Actuals for ${formatDate(forecastDate)} are not used to estimate historical MAE and bias.`
                             : "No forecast date selected."}
                 />
                 <Card
@@ -141,19 +274,31 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                         paddingTop: "1.75rem"
                     }}
                 >
-                    {forecastDate ? (
+                    {isLoadingForecasts ? (
+                        <p className="quick-take-copy">Loading forecast summary…</p>
+                    ) : forecastError ? (
+                        <p className="quick-take-copy">Forecast summary is unavailable.</p>
+                    ) : peakRow && lowestRow && averageForecast ? (
                         <p className="quick-take-copy">
-                            Wind is forecast to average 9,927 MW on {formatDate(forecastDate)}, from 6,471 MW
-                            at 12:00 up to 12,272 MW at 00:00.
+                            Forecast generation averages {averageForecast.value} on {formatDate(forecastDate)},
+                            ranging from {lowestForecast.value} at {formatTime(lowestRow.startTime)} UTC
+                            to {peakForecast.value} at {formatTime(peakRow.startTime)} UTC.
                         </p>
                     ) : (
                         <p className="quick-take-copy">
-                            Select a forecast date to view the forecast summary.
+                            {forecastDate
+                                ? "No forecast data is available for this date and cutoff."
+                                : "Select a forecast date to view the forecast summary."}
                         </p>
                     )}
                     <p className="card-footer">
-                        9 in 10 past half-hours, actual output landed between 4,118 MW
-                        below and 3,621 MW above the forecast.
+                        {isLoadingForecasts
+                            ? "Calculating the selected historical forecast range…"
+                            : visibleBand?.available
+                                ? `P${visibleBand.lower_pct}–P${visibleBand.upper_pct} range calculated using ${filters.history.toLowerCase()} history.`
+                                : visibleBand
+                                    ? "The forecast range is unavailable because there is not enough eligible history."
+                                    : "Select a forecast date to see its historical range."}
                     </p>
                 </Card>
             </section>
