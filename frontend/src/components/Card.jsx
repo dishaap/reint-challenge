@@ -12,7 +12,9 @@ export default function Card({
     tone = 'light',
     eyebrow,
     title,
+    subtitle,
     metrics = [],
+    list = [],
     footer,
     children,
     ...props
@@ -33,6 +35,11 @@ export default function Card({
                     {title}
                 </h2>
             )}
+            {subtitle && (
+                <p className="card-subtitle">
+                    {subtitle}
+                </p>
+            )}
             {metrics.length > 0 && (
                 <dl className="card-metrics">
                     {metrics.map(({ label, value, detail }) => (
@@ -43,6 +50,19 @@ export default function Card({
                             </dd>
                             {detail && (
                                 <p className="card-metric-detail">{detail}</p>
+                            )}
+                        </div>
+                    ))}
+                </dl>
+            )}
+            {list.length > 0 && (
+                <dl className="card-list">
+                    {list.map(({ label, value, detail }) => (
+                        <div key={label} className="card-list-item">
+                            <dt className="card-list-label">{label}</dt>
+                            <dd className="card-list-value">{value}</dd>
+                            {detail && (
+                                <dd className="card-list-detail">{detail}</dd>
                             )}
                         </div>
                     ))}
