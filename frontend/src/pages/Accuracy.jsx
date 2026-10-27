@@ -1,7 +1,7 @@
 import Filters from "../components/Filters";
 import Card from "../components/Card";
 
-export default function Accuracy() {
+export default function Accuracy({ filters, onFiltersChange }) {
     const summaryMetrics = [
         { label: "MAE", value: "2,013 MW", detail: "Typical miss" },
         { label: "RMSE", value: "2,518 MW", detail: "Weighs big misses more" },
@@ -20,7 +20,11 @@ export default function Accuracy() {
 
     return (
         <>
-            <Filters view="accuracy" />
+            <Filters
+                view="accuracy"
+                values={filters}
+                onChange={onFiltersChange}
+            />
             <section className="period-summary">
                 <Card
                     tone="green"

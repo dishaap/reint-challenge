@@ -1,4 +1,3 @@
-import { useState } from "react";
 import Dropdown from "./Dropdown";
 
 const filtersByView = {
@@ -16,25 +15,20 @@ function shiftDate(date, days) {
     return shiftedDate.toISOString().slice(0, 10);
 }
 
-export default function Filters({ view }) {
+export default function Filters({ view, values, onChange }) {
     const filters = filtersByView[view]
-    const [dates, setDates] = useState({})
-    const [cutoffTime, setCutoffTime] = useState("")
-    const [history, setHistory] = useState("All available")
-    const [percentiles, setPercentiles] = useState({ lower: 5, upper: 95 })
+    const { dates, cutoffTime, history, percentiles } = values
 
     function updateDate(label, value) {
-        setDates((currentDates) => {
-            if (
-                view === "accuracy" &&
-                ((label === "From" && currentDates.To && value >= currentDates.To) ||
-                    (label === "To" && currentDates.From && value <= currentDates.From))
-            ) {
-                return currentDates
-            }
+        if (
+            view === "accuracy" &&
+            ((label === "From" && dates.To && value >= dates.To) ||
+                (label === "To" && dates.From && value <= dates.From))
+        ) {
+            return
+        }
 
-            return { ...currentDates, [label]: value }
-        })
+        onChange({ dates: { ...dates, [label]: value } })
     }
 
     return(
@@ -57,7 +51,7 @@ export default function Filters({ view }) {
                                     id={inputId}
                                     className="dropdown-trigger filter-input history-select"
                                     value={history}
-                                    onChange={(event) => setHistory(event.target.value)}
+                                    onChange={(event) => onChange({ history: event.target.value })}
                                 >
                                     <option>All available</option>
                                     <option>Past 7 days</option>
@@ -70,7 +64,7 @@ export default function Filters({ view }) {
                                     type="time"
                                     step="60"
                                     value={cutoffTime}
-                                    onChange={(event) => setCutoffTime(event.target.value)}
+                                    onChange={(event) => onChange({ cutoffTime: event.target.value })}
                                 />
                             ) : (
                                 <input
@@ -122,10 +116,12 @@ export default function Filters({ view }) {
                                     value={percentiles.lower}
                                     className="percentile-slider-input lower"
                                     onChange={(event) => {
-                                        setPercentiles((current) => ({
-                                            ...current,
-                                            lower: Number(event.target.value),
-                                        }))
+                                        onChange({
+                                            percentiles: {
+                                                ...percentiles,
+                                                lower: Number(event.target.value),
+                                            },
+                                        })
                                     }}
                                 />
                                 <input
@@ -137,10 +133,12 @@ export default function Filters({ view }) {
                                     value={percentiles.upper}
                                     className="percentile-slider-input upper"
                                     onChange={(event) => {
-                                        setPercentiles((current) => ({
-                                            ...current,
-                                            upper: Number(event.target.value),
-                                        }))
+                                        onChange({
+                                            percentiles: {
+                                                ...percentiles,
+                                                upper: Number(event.target.value),
+                                            },
+                                        })
                                     }}
                                 />
                             </div>

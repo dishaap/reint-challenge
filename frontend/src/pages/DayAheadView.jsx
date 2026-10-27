@@ -16,10 +16,14 @@ const dailyMetrics = [
     { label: "Forecast Age", value: "12.5 - 36h", detail: "published 13 Jan, 11:30" }
 ]
 
-export default function DayAheadView() {
+export default function DayAheadView({ filters, onFiltersChange }) {
     return (
         <>
-            <Filters view="day-ahead" />
+            <Filters
+                view="day-ahead"
+                values={filters}
+                onChange={onFiltersChange}
+            />
             <section className="day-ahead-summary">
                 <Card
                     tone="green"
