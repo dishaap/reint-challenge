@@ -1,0 +1,80 @@
+.card {
+  min-width: 0;
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.card--green {
+  background: var(--color-3);
+  color: var(--text-light);
+}
+
+.card--rose {
+  background: #8f6d6d;
+  color: var(--text-light);
+}
+
+.card--light {
+  background: #fff;
+  color: var(--text-dark);
+}
+
+.card-eyebrow {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  opacity: 0.75;
+  text-transform: uppercase;
+}
+
+.card-title {
+  margin: 0 0 1.25rem;
+  color: inherit;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.card-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 1.5rem;
+  row-gap: 1rem;
+}
+
+.card-metric {
+  min-width: 0;
+}
+
+.card-metric-label,
+.card-metric-detail {
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
+
+.card-metric-value {
+  margin-top: 0.125rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.card-metric-detail {
+  margin-top: 0.25rem;
+}
+
+.card-footer {
+  margin-top: 1.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid currentColor;
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
+
+@media (min-width: 640px) {
+  .card-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

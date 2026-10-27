@@ -57,3 +57,34 @@
 .filters-container > .dropdown {
   flex: 1;
 }
+
+.day-ahead-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.day-ahead-summary > * {
+  min-width: 0;
+}
+
+.quick-take-copy {
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.quick-take-note {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid currentColor;
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
+
+@media (max-width: 640px) {
+  .day-ahead-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
