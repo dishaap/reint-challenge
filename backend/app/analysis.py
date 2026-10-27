@@ -214,20 +214,27 @@ def forecast_band(
 
 # analysis on whether forecast bands included actual generation. 
 def backtest_coverage(
-        t: pd.DataFrame,
-        cutoff: time = DEFAULT_CUTOFF,
-        window_days: int | None = None,
-        min_days: int = 3,
-        lower_pct: float = 5,
-        upper_pct: float = 95
+    t: pd.DataFrame,
+    cutoff: time = DEFAULT_CUTOFF,
+    window_days: int | None = None,
+    min_days: int = 3,
+    lower_pct: float = 5,
+    upper_pct: float = 95,
+    start: date | None = None,
+    end: date | None = None,
 ) -> tuple[pd.DataFrame, float | None]:
     rows = []
     for d in sorted(t["date_of_forecast"].unique()):
+        if start is not None and d < start:
+            continue
+        if end is not None and d > end:
+            continue
         band = forecast_band(t, d, cutoff, window_days, min_days, lower_pct, upper_pct)
         if band is None or band.empty:
             continue
         inside = (band["actual"] >= band["lower"]) & (band["actual"] <= band["upper"])
         rows.append({"date_of_forecast": d, "n": len(band), "n_inside": int(inside.sum())})
+
     per_day = pd.DataFrame(rows)
     if per_day.empty:
         return per_day, None
