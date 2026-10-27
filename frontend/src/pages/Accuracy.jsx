@@ -1,7 +1,25 @@
 import Filters from "../components/Filters";
 import Card from "../components/Card";
 
+function formatDayMonth(date) {
+    if (!date) return "—"
+
+    const parsedDate = new Date(`${date}T00:00:00Z`)
+    if (Number.isNaN(parsedDate.getTime())) return "—"
+
+    return new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "short",
+        timeZone: "UTC",
+    }).format(parsedDate)
+}
+
 export default function Accuracy({ filters, onFiltersChange }) {
+    const fromDate = filters.dates.From ?? ""
+    const toDate = filters.dates.To ?? ""
+    const dateRange = `${formatDayMonth(fromDate)}–${formatDayMonth(toDate)}`
+    const cutoffTime = filters.cutoffTime || "12:00"
+
     const summaryMetrics = [
         { label: "MAE", value: "2,013 MW", detail: "Typical miss" },
         { label: "RMSE", value: "2,518 MW", detail: "Weighs big misses more" },
@@ -29,7 +47,7 @@ export default function Accuracy({ filters, onFiltersChange }) {
                 <Card
                     tone="green"
                     metrics={summaryMetrics}
-                    footer="Based on 1,488 half-hours · 1–31 Jan 2026 · 12:00 UTC cutoff on D-1 · times in UTC"
+                    footer={`Based on selected period · ${dateRange} · ${cutoffTime} UTC cutoff on D-1 · times in UTC`}
                 />
                 <Card
                     tone="rose"
@@ -49,7 +67,10 @@ export default function Accuracy({ filters, onFiltersChange }) {
             <div>
                 <div className="section-header">
                     <p className="section-header-title">Forecast vs Actual</p>
-                    <p className="section-header-subtitle">Decision-time forecasts (latest published before the 12:00 UTC cutoff) against actual generation, 1–31 Jan 2026</p>
+                    <p className="section-header-subtitle">
+                        Decision-time forecasts (latest published before the {cutoffTime} UTC cutoff)
+                        {" against actual generation, "}{dateRange}
+                    </p>
                 </div>
                 <section className="forecast-actual-stats">
                     <Card tone="white" eyebrow="Graph"></Card>
@@ -87,8 +108,8 @@ export default function Accuracy({ filters, onFiltersChange }) {
                     <Card tone="white" eyebrow="Graph"></Card>
                     <Card
                         tone="rose"
-                        title="14 Jan 2026"
-                        eyebrow="Day at a Glance"
+                        title="Days with the largest typical error."
+                        eyebrow="Watch List"
                         list={watchList}
                         style={{
                             paddingTop: "1rem",

@@ -3,13 +3,6 @@ import Filters from "../components/Filters";
 import Card from "../components/Card";
 import ForecastTable from "../components/ForecastTable";
 
-const summaryMetrics = [
-    { label: "Data up to", value: "13 Jan, 12:00 UTC", detail: "Decision time (D-1 cutoff)" },
-    { label: "Forecast range", value: "Available", detail: "Built from 12 days of past errors" },
-    { label: "Historical MAE", value: "1,852 MW", detail: "Typical miss in this history" },
-    { label: "Bias", value: "+486 MW", detail: "Forecast ran slightly high" },
-    { label: "History used", value: "12 days", detail: "All available before cutoff" },
-]
 
 const dailyMetrics = [
     { label: "Peak", value: "12,272 MW", detail: "At 01:00 UTC" },
@@ -20,7 +13,7 @@ const dailyMetrics = [
 
 function getPreviousDate(date) {
     if (!date) return ""
-
+    
     const previousDate = new Date(`${date}T00:00:00Z`)
     previousDate.setUTCDate(previousDate.getUTCDate() - 1)
     return previousDate.toISOString().slice(0, 10)
@@ -29,12 +22,28 @@ function getPreviousDate(date) {
 function formatDate(date) {
     if (!date) return "—"
 
+    const parsedDate = new Date(`${date}T00:00:00Z`)
+    if (Number.isNaN(parsedDate.getTime())) return "—"
+
     return new Intl.DateTimeFormat("en-GB", {
         day: "numeric",
         month: "short",
         year: "numeric",
         timeZone: "UTC",
-    }).format(new Date(`${date}T00:00:00Z`))
+    }).format(parsedDate)
+}
+
+function formatDayMonth(date) {
+    if (!date) return "—"
+
+    const parsedDate = new Date(`${date}T00:00:00Z`)
+    if (Number.isNaN(parsedDate.getTime())) return "—"
+
+    return new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "short",
+        timeZone: "UTC",
+    }).format(parsedDate)
 }
 
 export default function DayAheadView({ filters, onFiltersChange }) {
@@ -43,6 +52,18 @@ export default function DayAheadView({ filters, onFiltersChange }) {
     const [forecastRows, setForecastRows] = useState([])
     const [isLoadingForecasts, setIsLoadingForecasts] = useState(false)
     const [forecastError, setForecastError] = useState("")
+    
+    const summaryMetrics = [
+        {
+            label: "Data up to",
+            value: `${formatDayMonth(decisionDate)}, ${filters.cutoffTime || "12:00"}`,
+            detail: "UTC · D-1 cutoff",
+        },
+        { label: "Forecast range", value: "Available", detail: "Built from 12 days of past errors" },
+        { label: "Historical MAE", value: "1,852 MW", detail: "Typical miss in this history" },
+        { label: "Bias", value: "+486 MW", detail: "Forecast ran slightly high" },
+        { label: "History used", value: "12 days", detail: "All available before cutoff" },
+    ]
 
     useEffect(() => {
         if (!forecastDate) {
@@ -109,7 +130,9 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                 <Card
                     tone="green"
                     metrics={summaryMetrics}
-                    footer="Forecasts published after 12:00 UTC on 13 Jan are not used · times in UTC"
+                    footer={decisionDate
+                            ? `Forecasts published after ${filters.cutoffTime || "12:00"} UTC on ${formatDate(decisionDate)} are not used.`
+                            : "No forecast date selected."}
                 />
                 <Card
                     tone="rose"
@@ -118,10 +141,16 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                         paddingTop: "1.75rem"
                     }}
                 >
-                    <p className="quick-take-copy">
-                        Wind is forecast to average 9,927 MW on 14 Jan, from 6,471 MW
-                        at 12:00 up to 12,272 MW at 00:00.
-                    </p>
+                    {forecastDate ? (
+                        <p className="quick-take-copy">
+                            Wind is forecast to average 9,927 MW on {formatDate(forecastDate)}, from 6,471 MW
+                            at 12:00 up to 12,272 MW at 00:00.
+                        </p>
+                    ) : (
+                        <p className="quick-take-copy">
+                            Select a forecast date to view the forecast summary.
+                        </p>
+                    )}
                     <p className="card-footer">
                         9 in 10 past half-hours, actual output landed between 4,118 MW
                         below and 3,621 MW above the forecast.
@@ -132,16 +161,16 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                 <div className="section-header">
                     <p className="section-header-title">Forecast generation by half-hour</p>
                     <p className="section-header-subtitle">
-                        Latest forecast available at {filters.cutoffTime || "12:00"} UTC
-                        {" on "}{formatDate(decisionDate)}{" for "}{formatDate(forecastDate)},
-                        {" with the range implied by past errors."}
+                        {forecastDate
+                            ? `Latest forecast available at ${filters.cutoffTime || "12:00"} UTC on ${formatDate(decisionDate)} for ${formatDate(forecastDate)}, with the range implied by past errors.`
+                            : "Select a forecast date to see the forecast period."}
                     </p>
                 </div>
                 <section className="forecast-stats">
                     <Card tone="light" eyebrow="Graph"></Card>
                     <Card
                         tone="rose"
-                        title="14 Jan 2026"
+                        title={formatDate(forecastDate)}
                         eyebrow="Day at a Glance"
                         list={dailyMetrics}
                         style={{
@@ -156,9 +185,9 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                 <div className="section-header">
                     <p className="section-header-title">Half-Hour Forecast Table</p>
                     <p className="section-header-subtitle">
-                        Latest forecast available at {filters.cutoffTime || "12:00"} UTC
-                        {" on "}{formatDate(decisionDate)}{" for "}{formatDate(forecastDate)},
-                        {" in table format."}
+                        {forecastDate
+                            ? `Latest forecast available at ${filters.cutoffTime || "12:00"} UTC on ${formatDate(decisionDate)} for ${formatDate(forecastDate)}, in table format.`
+                            : "Select a forecast date to see the forecast table."}
                     </p>
                 </div>
                 <ForecastTable
