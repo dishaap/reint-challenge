@@ -126,7 +126,7 @@ npm run dev
 
 ## Deployment
 
-The frontend and FastAPI backend deploy together as one Vercel project. The frontend calls the API on the same domain; the committed forecast cache files are bundled with the Python function.
+The frontend and FastAPI backend deploy together as one Vercel project. The frontend calls the API on the same domain.
 
 For an existing Vercel project:
 
