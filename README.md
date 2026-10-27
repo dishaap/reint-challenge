@@ -2,8 +2,6 @@
 
 This is a solution for the Gridbricks ReInt challenge by Disha Pandurangi.
 
-Project started 10:13 AM IST, Oct 26 2026.
-
 ## Problem Statement
 
 A UK-based energy utility client provides electricity to its customers via renewable energy sources such as wind generators and covers any additional energy needs through buying it via the day-ahead market.
@@ -24,6 +22,10 @@ The tech stack used is Python (FastAPI), React (Vite) and Docker.
 
 **Scope:** national-level wind generation (actuals and forecasts) from Elexon only, for purchase decisions made in January 2026.
 
+### Design Document
+
+The design was wireframed and the two proposed views were rendered in [Figma](https://www.figma.com/design/Jlevrl5OoV6wO29AcC7oN2/ReInt-Challenge?node-id=0-1&t=SYS8nqgyaMRgP0y9-1)
+
 ### Project structure
 
 ```
@@ -33,7 +35,6 @@ backend/
     forecast_data.py # Fetching and caching of FUELHH and WINDFOR data from Elexon
     analysis.py      # Forecast selection, error metrics and as-of margins
   data/              # Cached Elexon responses (created on first fetch - in .gitignore so will be created locally)
-  tests/
   Dockerfile
   requirements.txt
 frontend/            # React (Vite)
@@ -52,7 +53,9 @@ docker-compose.yml
 ## Methodology
 
 ### Decision-time forecast
-For each target half-hour, the forecast used is the latest WINDFOR publication with `publishTime` at or before the decision cutoff on the previous day (D-1). The default cutoff is 12:00 UTC and can be changed per request (`cutoff=HH:MM`).
+Forecasts and their error ranges are calculated at half-hourly resolution. For each target half-hour, the forecast used is the latest WINDFOR publication with `publishTime` at or before the decision cutoff on the previous day (D-1). The default cutoff is 12:00 UTC and can be changed per request (`cutoff=HH:MM`).
+
+For readability, the day-ahead forecast report/API returns hourly samples from the half-hourly forecasts and ranges rather than displaying every point. This is a presentation choice; the underlying forecasts, historical error calculations, and ranges remain half-hourly.
 
 ### As-of error statistics
 Error margins shown for a delivery day are built **only from periods already observed at the decision time**, so nothing from the delivery day or later is used (no look-ahead).
@@ -75,9 +78,9 @@ The percentiles default to 5 and 95 (a nominal 90% range) and are configurable (
 This range describes how far past forecasts were from actuals. It is information for the decision, not a recommended purchase quantity.
 
 ### Backtest
-For every delivery day with enough history, the range is built using only information available at that day's decision time, then compared with the actual generation. The share of half-hours where the actual fell inside the range should be close to the nominal 90%.
+For every delivery day with enough history, the range is built using only information available at that day's decision time, then compared with actual generation. Backtest coverage is evaluated over the hourly report periods returned by the API and should be close to the nominal 90%.
 
-Result on January 2026 data (cutoff 12:00 UTC, expanding window): **XX.X%** of actuals inside the range. `TBD`
+Result on January 2026 data (12:00 UTC cutoff, P5–P95 range): **84.8%** of evaluated actuals fell inside the range.
 
 ## Limitations
 
@@ -91,11 +94,67 @@ Interactive docs are at `/docs` when the backend is running. All times are UTC.
 
 | Endpoint | Purpose | Main parameters |
 |---|---|---|
-| `GET /api/health` | Health check | none |
+| `GET /health` | Health check | none |
 | `GET /api/meta` | Selectable delivery dates, cutoff in use, data-gap counts | `cutoff` |
-| `GET /api/forecast/{forecast_date}` | Latest forecast available at the cutoff for one day, with publish time, horizon, actual (if known), as-of stats and range | `cutoff`, `window_days`, `min_days`, `lower_pct`, `upper_pct` |
+| `GET /api/forecast/{forecast_date}` | Hourly report samples from the half-hourly forecasts and ranges, plus publish time, horizon, actual (if known), and as-of stats | `cutoff`, `window_days`, `min_days`, `lower_pct`, `upper_pct` |
 | `GET /api/metrics` | Accuracy metrics and breakdowns over the whole period or a range | `cutoff`, `start`, `end` |
 | `GET /api/backtest` | Share of actuals inside the as-of range, per day and overall | `cutoff`, `window_days`, `min_days`, `lower_pct`, `upper_pct` |
+
+### Example Usage
+
+Interactive API documentation is available at [http://localhost:8000/docs](http://localhost:8000/docs) when running locally. Replace `localhost:8000` with the backend address if needed.
+
+Example request:
+
+```text
+GET http://localhost:8000/api/forecast/2026-01-02?cutoff=12:00&window_days=1&min_days=1&lower_pct=5&upper_pct=95
+```
+
+This example uses `window_days=1` and `min_days=1` to show a range with a short history window. The normal minimum is 3 distinct history days.
+
+Example response (shortened to the first hourly report row; the live response includes all hourly rows):
+
+```json
+{
+  "forecast_date": "2026-01-02",
+  "cutoff": "12:00",
+  "decision_time": "2026-01-01T12:00:00+00:00",
+  "band": {
+    "available": true,
+    "lower_pct": 5,
+    "upper_pct": 95
+  },
+  "asof_stats": {
+    "status": "ok",
+    "history_days": 1,
+    "n": 12,
+    "mae": 4328.166666666667,
+    "rmse": 4406.008851557155,
+    "bias": 4328.166666666667,
+    "nmae_pct": 28.606993946804586,
+    "over_forecast_share": 1,
+    "mean_over_forecast": 4328.166666666667,
+    "mean_under_forecast": 0,
+    "abs_error_p90": 5681,
+    "error_p5": 3467,
+    "error_p25": 3835,
+    "error_p50": 3951.5,
+    "error_p75": 4759.25,
+    "error_p95": 5748.15
+  },
+  "rows": [
+    {
+      "startTime": "2026-01-02T00:00:00.000Z",
+      "publishTime": "2026-01-01T11:30:00.000Z",
+      "horizon_hours": 12.5,
+      "forecast": 18800,
+      "actual": 15228,
+      "lower": 13051.85,
+      "upper": 15333
+    }
+  ]
+}
+```
 
 ## Running locally
 
@@ -108,21 +167,47 @@ docker compose up --build
 - Frontend: http://localhost:3000
 - Backend API docs: http://localhost:8000/docs
 
-Without Docker:
+Without Docker, start the backend and frontend in separate terminals from the repository root.
+
+### Unix / macOS
 
 ```bash
-# backend
 cd backend
-python3 -m venv .venv && source .venv/bin/activate   # Windows PowerShell: .venv\Scripts\Activate.ps1
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-python -m app.forecast_data        # fetch and cache Elexon data into backend/data/ (first run only)
+python -m app.forecast_data
 uvicorn app.main:app --reload
+```
 
-# frontend
+In a second terminal:
+
+```bash
 cd frontend
 npm install
 npm run dev
 ```
+
+### Windows PowerShell
+
+```powershell
+cd backend
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m app.forecast_data
+uvicorn app.main:app --reload
+```
+
+In a second PowerShell terminal:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+The first run of `python -m app.forecast_data` fetches Elexon data and caches it under `backend/data/`. Subsequent runs use the cache unless it is refreshed.
 
 ## Deployment
 
@@ -149,5 +234,6 @@ AI tools (Claude Code & Copilot) were used to assist with some tasks in this pro
 - in analysis.py for implementing functions to design functions for analytics that I had defined in my product description, such as as-of error stats
 - to implement the graphs using native svg rendering as Rechart did not work
 - to complete comment documentation for smoother knowledge transfer of codebase
+- to fix README for clarity and readability
 
 All outputs were reviewed by me.
