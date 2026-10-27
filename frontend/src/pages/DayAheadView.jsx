@@ -8,6 +8,9 @@ const CHART_WIDTH = 900
 const CHART_HEIGHT = 320
 const CHART_MARGIN = { top: 16, right: 18, bottom: 48, left: 72 }
 
+/* ---------HELPERS-------- */
+
+// get cutoff date (D-1)
 function getPreviousDate(date) {
     if (!date) return ""
     
@@ -16,6 +19,7 @@ function getPreviousDate(date) {
     return previousDate.toISOString().slice(0, 10)
 }
 
+// format date. ex: 05 Jan 2026
 function formatDate(date) {
     if (!date) return "—"
 
@@ -30,6 +34,7 @@ function formatDate(date) {
     }).format(parsedDate)
 }
 
+// alternate format for date. ex: 05 Jan
 function formatDayMonth(date) {
     if (!date) return "—"
 
@@ -43,6 +48,7 @@ function formatDayMonth(date) {
     }).format(parsedDate)
 }
 
+// round value to nearest integer (ceil) and return as str with +/- and MW
 function formatMegawatts(value, signed = false) {
     if (typeof value !== "number" || !Number.isFinite(value)) return "—"
 
@@ -51,6 +57,7 @@ function formatMegawatts(value, signed = false) {
     return `${sign}${rounded.toLocaleString()} MW`
 }
 
+// format time as HH:MM (24h format)
 function formatTime(dateTime) {
     if (!dateTime) return "—"
 
@@ -65,10 +72,12 @@ function formatTime(dateTime) {
     }).format(parsedDate)
 }
 
+// return Y-axis value for forecast chart
 function chartY(value, max, plotTop, plotHeight) {
     return plotTop + plotHeight - (value / max) * plotHeight
 }
 
+// format axis labels by rounding to nearest int (ceil) and rendering to str
 function formatAxisValue(value) {
     return Math.round(value).toLocaleString()
 }
@@ -81,6 +90,7 @@ function formatCadence(milliseconds) {
     return `${minutes}-minute data`
 }
 
+// render forecast chart
 function ForecastChart({ rows, loading, error, forecastDate, band }) {
     if (!forecastDate) {
         return <p className="day-ahead-chart-message">Select a forecast date to view the chart.</p>
@@ -308,6 +318,7 @@ function ForecastChart({ rows, loading, error, forecastDate, band }) {
     )
 }
 
+// get metrics for high, low, average and horizons for the date of forecast selected
 function getDailyMetrics(rows) {
     const validRows = rows.filter(
         (row) => typeof row.forecast === "number" && Number.isFinite(row.forecast),
@@ -356,6 +367,7 @@ function getDailyMetrics(rows) {
     ]
 }
 
+// render DayAhead page
 export default function DayAheadView({ filters, onFiltersChange }) {
     const forecastDate = filters.dates["Date of Forecast"] ?? ""
     const decisionDate = getPreviousDate(forecastDate)
@@ -386,6 +398,7 @@ export default function DayAheadView({ filters, onFiltersChange }) {
     )
     const hasStats = visibleStats?.status === "ok"
     const hasInsufficientHistory = visibleStats?.status === "insufficient_history"
+
     const summaryMetrics = [
         {
             label: "Data up to",
@@ -433,6 +446,7 @@ export default function DayAheadView({ filters, onFiltersChange }) {
     ]
 
     useEffect(() => {
+        // error handling
         if (!forecastDate) {
             return undefined
         }
@@ -511,6 +525,7 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                 onChange={onFiltersChange}
             />
             <section className="day-ahead-summary">
+                // quick summary of relevant historical stats and metadata on availability
                 <Card
                     tone="green"
                     metrics={summaryMetrics}
@@ -518,6 +533,8 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                             ? `Forecasts published after ${filters.cutoffTime || "12:00"} UTC on ${formatDate(decisionDate)} are not used. Actuals for ${formatDate(forecastDate)} are not used to estimate historical MAE and bias.`
                             : "No forecast date selected."}
                 />
+
+                // quick view on average, high, low of forecast for the date
                 <Card
                     tone="rose"
                     eyebrow="Quick take"
@@ -562,6 +579,8 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                             : "Select a forecast date to see the forecast period."}
                     </p>
                 </div>
+
+                // hourly forecast data represented as graph with area graph for hi-lo percentiles to understand error
                 <section className="forecast-stats">
                     <Card tone="light" eyebrow="Graph" className="day-ahead-chart-card">
                         <ForecastChart
@@ -572,6 +591,8 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                             band={visibleBand}
                         />
                     </Card>
+
+                    // expanded version of quick take
                     <Card
                         tone="rose"
                         title={formatDate(forecastDate)}
@@ -586,6 +607,7 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                 </section>
             </div>
             <div>
+                // hourly data represented as table
                 <div className="section-header">
                     <p className="section-header-title">Forecast Table</p>
                     <p className="section-header-subtitle">
