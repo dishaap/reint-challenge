@@ -66,7 +66,11 @@ function formatMegawatts(value, signed = false) {
 }
 
 function makeApiUrl(path, params) {
-    const apiBase = (import.meta.env.VITE_API_URL || "http://localhost:8000")
+    const configuredApiUrl = import.meta.env.VITE_API_URL?.trim()
+    const isLocalhostUrl = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredApiUrl || "")
+    const apiBase = (import.meta.env.PROD && isLocalhostUrl
+        ? ""
+        : configuredApiUrl || (import.meta.env.DEV ? "http://localhost:8000" : ""))
         .replace(/\/+$/, "")
     return `${apiBase}${path}?${params}`
 }

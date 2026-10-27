@@ -126,7 +126,18 @@ npm run dev
 
 ## Deployment
 
-This project was deployed via Vercel at [reint-challenge.vercel.app](reint-challenge.vercel.app)
+The frontend and FastAPI backend deploy together as one Vercel project. The frontend calls the API on the same domain; the committed forecast cache files are bundled with the Python function.
+
+For an existing Vercel project:
+
+1. Set **Root Directory** to the repository root (not `frontend`).
+2. Leave the **Build Command** and **Output Directory** unset so Vercel uses [`vercel.json`](./vercel.json) and FastAPI's frontend integration.
+3. Remove any `VITE_API_URL` value that points to `localhost`. Production builds use the same-origin FastAPI endpoints by default. Keep `VITE_API_URL` unset unless you are intentionally using a separately hosted API.
+4. Redeploy the project.
+
+The deployment uses the root [`app.py`](./app.py) entrypoint, installs Python dependencies from [`requirements.txt`](./requirements.txt), builds the Vite app, and serves the API and frontend on the same deployment.
+
+For local development, continue running FastAPI and Vite separately as described above.
 
 ## AI Declaration
 
