@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import Filters from "../components/Filters";
 import Card from "../components/Card";
+import ForecastTable from "../components/ForecastTable";
 
 const summaryMetrics = [
     { label: "Data up to", value: "13 Jan, 12:00 UTC", detail: "Decision time (D-1 cutoff)" },
@@ -10,13 +12,92 @@ const summaryMetrics = [
 ]
 
 const dailyMetrics = [
-    { label: "Peak", value: "12,272 MW", detail: "at 1:00 | range: 8185 - 15984 MW" },
-    { label: "Lowest", value: "6,471 MW", detail: "at 12:00 · range 2,353–10,092" },
-    { label: "Average", value: "9,927 MW", detail: "across 48 half-hours" },
-    { label: "Forecast Age", value: "12.5 - 36h", detail: "published 13 Jan, 11:30" }
+    { label: "Peak", value: "12,272 MW", detail: "At 01:00 UTC" },
+    { label: "Lowest", value: "6,471 MW", detail: "At 12:00 UTC" },
+    { label: "Average", value: "9,927 MW", detail: "Across 48 half-hours" },
+    { label: "Forecast age", value: "12.5–36 h", detail: "Published 13 Jan, 11:30 UTC" },
 ]
 
+function getPreviousDate(date) {
+    if (!date) return ""
+
+    const previousDate = new Date(`${date}T00:00:00Z`)
+    previousDate.setUTCDate(previousDate.getUTCDate() - 1)
+    return previousDate.toISOString().slice(0, 10)
+}
+
+function formatDate(date) {
+    if (!date) return "—"
+
+    return new Intl.DateTimeFormat("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+    }).format(new Date(`${date}T00:00:00Z`))
+}
+
 export default function DayAheadView({ filters, onFiltersChange }) {
+    const forecastDate = filters.dates["Date of Forecast"] ?? ""
+    const decisionDate = getPreviousDate(forecastDate)
+    const [forecastRows, setForecastRows] = useState([])
+    const [isLoadingForecasts, setIsLoadingForecasts] = useState(false)
+    const [forecastError, setForecastError] = useState("")
+
+    useEffect(() => {
+        if (!forecastDate) {
+            return undefined
+        }
+
+        const controller = new AbortController()
+        const params = new URLSearchParams({
+            cutoff: filters.cutoffTime || "12:00",
+            lower_pct: String(filters.percentiles.lower),
+            upper_pct: String(filters.percentiles.upper),
+        })
+
+        if (filters.history !== "All available") {
+            params.set("window_days", filters.history === "Past 7 days" ? "7" : "14")
+        }
+
+        async function loadForecasts() {
+            setIsLoadingForecasts(true)
+            setForecastError("")
+
+            try {
+                const apiBase = (import.meta.env.VITE_API_URL || "http://localhost:8000")
+                    .replace(/\/+$/, "")
+                const response = await fetch(
+                    `${apiBase}/api/forecast/${forecastDate}?${params}`,
+                    { signal: controller.signal },
+                )
+                const result = await response.json()
+
+                if (!response.ok) {
+                    throw new Error(result.detail || `Request failed (${response.status})`)
+                }
+
+                if (!Array.isArray(result.rows)) {
+                    throw new Error("The forecast API returned an invalid rows value.")
+                }
+
+                setForecastRows(result.rows)
+            } catch (error) {
+                if (!controller.signal.aborted) {
+                    setForecastRows([])
+                    setForecastError(error instanceof Error ? error.message : String(error))
+                }
+            } finally {
+                if (!controller.signal.aborted) {
+                    setIsLoadingForecasts(false)
+                }
+            }
+        }
+
+        loadForecasts()
+        return () => controller.abort()
+    }, [forecastDate, filters.cutoffTime, filters.history, filters.percentiles])
+
     return (
         <>
             <Filters
@@ -50,10 +131,14 @@ export default function DayAheadView({ filters, onFiltersChange }) {
             <div>
                 <div className="section-header">
                     <p className="section-header-title">Forecast generation by half-hour</p>
-                    <p className="section-header-subtitle">Latest forecast available at 12:00 UTC on 13 Jan for 14 Jan 2026, with the range implied by past errors</p>
+                    <p className="section-header-subtitle">
+                        Latest forecast available at {filters.cutoffTime || "12:00"} UTC
+                        {" on "}{formatDate(decisionDate)}{" for "}{formatDate(forecastDate)},
+                        {" with the range implied by past errors."}
+                    </p>
                 </div>
                 <section className="forecast-stats">
-                    <Card tone="white" eyebrow="Graph"></Card>
+                    <Card tone="light" eyebrow="Graph"></Card>
                     <Card
                         tone="rose"
                         title="14 Jan 2026"
@@ -66,6 +151,22 @@ export default function DayAheadView({ filters, onFiltersChange }) {
                     >
                     </Card>
                 </section>
+            </div>
+            <div>
+                <div className="section-header">
+                    <p className="section-header-title">Half-Hour Forecast Table</p>
+                    <p className="section-header-subtitle">
+                        Latest forecast available at {filters.cutoffTime || "12:00"} UTC
+                        {" on "}{formatDate(decisionDate)}{" for "}{formatDate(forecastDate)},
+                        {" in table format."}
+                    </p>
+                </div>
+                <ForecastTable
+                    rows={forecastRows}
+                    loading={isLoadingForecasts}
+                    error={forecastError}
+                    forecastDate={forecastDate}
+                />
             </div>
         </>
     )

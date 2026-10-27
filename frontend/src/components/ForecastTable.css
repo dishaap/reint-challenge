@@ -1,0 +1,57 @@
+.forecast-table-section {
+  margin-top: 2rem;
+  text-align: left;
+}
+
+.forecast-table-title {
+  margin: 0 0 1rem;
+  color: var(--color-3);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.forecast-table-message {
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: var(--text-dark);
+}
+
+.forecast-table-error {
+  color: var(--color-4);
+}
+
+.forecast-table-scroll {
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.forecast-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.forecast-table th,
+.forecast-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-2);
+}
+
+.forecast-table th {
+  background: var(--color-3);
+  color: var(--text-light);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.forecast-table td {
+  color: var(--text-dark);
+}
+
+.forecast-table tbody tr:last-child td {
+  border-bottom: 0;
+}
