@@ -1,7 +1,5 @@
 # REINT CHALLENGE
 
-This is a solution for the Gridbricks ReInt challenge by Disha Pandurangi.
-
 ## Problem Statement
 
 A UK-based energy utility client provides electricity to its customers via renewable energy sources such as wind generators and covers any additional energy needs through buying it via the day-ahead market.
@@ -40,6 +38,10 @@ backend/
 frontend/            # React (Vite)
   Dockerfile         # Multi-stage build, served via nginx
 docker-compose.yml
+app.py               # Locate main files for frontend and backend for deployment
+vercel.json          # Vercel schema
+pyproject.toml       # Python dependencies for Vercel
+requirements.txt
 ```
 
 ### Key design decisions
