@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080" font-family="Work Sans, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0L10 5L0 10z" fill="#174D38"/></marker>
+  </defs>
+  <rect width="1920" height="1080" fill="#F2F2F2"/>
+  <text x="80" y="105" font-size="52" font-weight="700" fill="#174D38">Architecture</text>
+  <text x="80" y="150" font-size="26" fill="#555">From Elexon data to a decision-time view of wind forecasts and their error</text>
+
+  <!-- Row 1: data flow -->
+  <g font-size="22">
+    <!-- Elexon -->
+    <rect x="80" y="210" width="320" height="260" rx="33" fill="#4D1717"/>
+    <text x="110" y="262" font-size="28" font-weight="700" fill="#fff">Elexon BMRS API</text>
+    <text x="110" y="310" fill="#fff">FUELHH → actual wind</text>
+    <text x="110" y="345" fill="#fff">WINDFOR → forecasts</text>
+    <text x="110" y="395" fill="#E8CFCF" font-size="19">Jan 2026 · national level</text>
+    <text x="110" y="425" fill="#E8CFCF" font-size="19">many publishTimes per target</text>
+
+    <!-- forecast_data -->
+    <rect x="470" y="210" width="320" height="260" rx="33" fill="#174D38"/>
+    <text x="500" y="262" font-size="28" font-weight="700" fill="#fff">forecast_data.py</text>
+    <text x="500" y="310" fill="#fff">Fetch with httpx</text>
+    <text x="500" y="345" fill="#fff">Cache as JSON</text>
+    <text x="500" y="395" fill="#CFE3D9" font-size="19">backend/data/*.json</text>
+    <text x="500" y="425" fill="#CFE3D9" font-size="19">committed → no live calls</text>
+
+    <!-- analysis -->
+    <rect x="860" y="210" width="400" height="260" rx="33" fill="#174D38"/>
+    <text x="890" y="262" font-size="28" font-weight="700" fill="#fff">analysis.py</text>
+    <text x="890" y="305" fill="#fff">1 Latest forecast ≤ D-1 cutoff</text>
+    <text x="890" y="340" fill="#fff">2 Error = forecast − actual</text>
+    <text x="890" y="375" fill="#fff">3 As-of stats (no look-ahead)</text>
+    <text x="890" y="410" fill="#fff">4 Range + backtest coverage</text>
+    <text x="890" y="445" fill="#CFE3D9" font-size="19">pandas · numpy</text>
+
+    <!-- main -->
+    <rect x="1330" y="210" width="240" height="260" rx="33" fill="#174D38"/>
+    <text x="1360" y="262" font-size="28" font-weight="700" fill="#fff">main.py</text>
+    <text x="1360" y="305" fill="#fff" font-size="20">FastAPI · /docs</text>
+    <text x="1360" y="345" fill="#CFE3D9" font-size="18">/api/meta</text>
+    <text x="1360" y="372" fill="#CFE3D9" font-size="18">/api/forecast/{date}</text>
+    <text x="1360" y="399" fill="#CFE3D9" font-size="18">/api/metrics</text>
+    <text x="1360" y="426" fill="#CFE3D9" font-size="18">/api/backtest</text>
+
+    <!-- React -->
+    <rect x="1640" y="210" width="200" height="260" rx="33" fill="#fff" stroke="#174D38" stroke-width="3"/>
+    <text x="1670" y="262" font-size="28" font-weight="700" fill="#174D38">React</text>
+    <text x="1670" y="305" fill="#174D38" font-size="20">Vite · Recharts</text>
+    <text x="1670" y="355" fill="#174D38" font-size="20">Day-Ahead</text>
+    <text x="1670" y="385" fill="#174D38" font-size="20">Accuracy</text>
+    <text x="1670" y="430" fill="#777" font-size="17">filters → params</text>
+  </g>
+  <g stroke="#174D38" stroke-width="4" marker-end="url(#a)">
+    <line x1="402" y1="340" x2="466" y2="340"/>
+    <line x1="792" y1="340" x2="856" y2="340"/>
+    <line x1="1262" y1="340" x2="1326" y2="340"/>
+    <line x1="1572" y1="340" x2="1636" y2="340"/>
+  </g>
+  <text x="80" y="520" font-size="20" fill="#777">Cutoff, window, percentiles and date range flow from the UI as API parameters; the backend recomputes per request.</text>
+
+  <!-- Row 2: run targets -->
+  <text x="80" y="590" font-size="30" font-weight="700" fill="#174D38">Where it runs</text>
+  <rect x="80" y="615" width="860" height="190" rx="33" fill="#fff"/>
+  <text x="115" y="665" font-size="26" font-weight="700" fill="#174D38">Local / review: Docker Compose</text>
+  <text x="115" y="710" font-size="22" fill="#333">frontend: nginx serves the built bundle on :3000</text>
+  <text x="115" y="745" font-size="22" fill="#333">backend: uvicorn on :8000 · docs at /docs</text>
+  <text x="115" y="780" font-size="22" fill="#333">same build on any machine: docker compose up --build</text>
+
+  <rect x="980" y="615" width="860" height="190" rx="33" fill="#fff"/>
+  <text x="1015" y="665" font-size="26" font-weight="700" fill="#174D38">Production: one Vercel project</text>
+  <text x="1015" y="710" font-size="22" fill="#333">app.py imports the FastAPI app, serves frontend/dist</text>
+  <text x="1015" y="745" font-size="22" fill="#333">UI and API share an origin (no CORS, no second deploy)</text>
+  <text x="1015" y="780" font-size="22" fill="#333">Vercel doesn't run containers, so Docker is local only</text>
+
+  <!-- Row 3: decisions -->
+  <text x="80" y="865" font-size="30" font-weight="700" fill="#174D38">Design decisions that matter</text>
+  <g font-size="22" fill="#333">
+    <rect x="80" y="890" width="560" height="130" rx="33" fill="#CBCBCB"/>
+    <text x="115" y="940" font-weight="700">No look-ahead</text>
+    <text x="115" y="975" font-size="20">Margins use only errors seen by the cutoff</text>
+    <rect x="680" y="890" width="560" height="130" rx="33" fill="#CBCBCB"/>
+    <text x="715" y="940" font-weight="700">Decision cutoff is explicit</text>
+    <text x="715" y="975" font-size="20">12:00 UTC on D-1 by default, adjustable</text>
+    <rect x="1280" y="890" width="560" height="130" rx="33" fill="#CBCBCB"/>
+    <text x="1315" y="940" font-weight="700">Informs, doesn't prescribe</text>
+    <text x="1315" y="975" font-size="20">Range and error stats, never a buy quantity</text>
+  </g>
+</svg>

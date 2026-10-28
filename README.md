@@ -235,5 +235,6 @@ AI tools (Claude Code & Copilot) were used to assist with some tasks in this pro
 - to implement the graphs using native svg rendering as Rechart did not work
 - to complete comment documentation for smoother knowledge transfer of codebase
 - to fix README for clarity and readability
+- to create an architecture overview SVG
 
 All outputs were reviewed by me.
