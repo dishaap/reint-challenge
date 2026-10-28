@@ -32,7 +32,7 @@ backend/
     main.py          # FastAPI app and API endpoints
     forecast_data.py # Fetching and caching of FUELHH and WINDFOR data from Elexon
     analysis.py      # Forecast selection, error metrics and as-of margins
-  data/              # Cached Elexon responses (created on first fetch - in .gitignore so will be created locally)
+  data/              # Cached Elexon responses (created on first fetch - pushed for Vercel. if you would like to test caching, please delete JSON files in the folder)
   Dockerfile
   requirements.txt
 frontend/            # React (Vite)
