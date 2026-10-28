@@ -1,7 +1,5 @@
 # REINT CHALLENGE
 
-This is a solution for the Gridbricks ReInt challenge by Disha Pandurangi.
-
 ## Problem Statement
 
 A UK-based energy utility client provides electricity to its customers via renewable energy sources such as wind generators and covers any additional energy needs through buying it via the day-ahead market.
@@ -34,12 +32,16 @@ backend/
     main.py          # FastAPI app and API endpoints
     forecast_data.py # Fetching and caching of FUELHH and WINDFOR data from Elexon
     analysis.py      # Forecast selection, error metrics and as-of margins
-  data/              # Cached Elexon responses (created on first fetch - in .gitignore so will be created locally)
+  data/              # Cached Elexon responses (created on first fetch - pushed for Vercel. if you would like to test caching, please delete JSON files in the folder)
   Dockerfile
   requirements.txt
 frontend/            # React (Vite)
   Dockerfile         # Multi-stage build, served via nginx
 docker-compose.yml
+app.py               # Locate main files for frontend and backend for deployment
+vercel.json          # Vercel schema
+pyproject.toml       # Python dependencies for Vercel
+requirements.txt
 ```
 
 ### Key design decisions
